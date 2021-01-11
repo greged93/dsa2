@@ -1,0 +1,2 @@
+generations,population_size,mutation_rate,crossover_rate
+100,50,0.5,0.5
