@@ -270,8 +270,7 @@ class MultimodalAutoencoder(Model):
                                shuffle=shuffle,
                                sample_weight=sample_weight,
                                initial_epoch=initial_epoch,
-                               steps_per_epoch=steps_per_epoch,
-                               validation_steps=validation_steps)
+                               steps_per_epoch=steps_per_epoch)
 
     def evaluate_reconstruction(self, data=None, batch_size=None, verbose=1,
                  sample_weight=None, steps=None):
@@ -708,6 +707,7 @@ class MultimodalAutoencoder(Model):
                 activations = [Activation(output_activations[i],
                                           name=cls._append_output_name(name))
                                for i, name in enumerate(modality_names)]
+        print(f'Output Decodere {output_decoder}')
         for i, activation in enumerate(activations):
             output_decoder[i] = activation(output_decoder[i])
             output_autoencoder[i] = activation(output_autoencoder[i])

@@ -20,3 +20,4 @@ from __future__ import absolute_import
 from . import bregman_divergences
 from . import multimodal_autoencoder
 from .multimodal_autoencoder import MultimodalAutoencoder
+from . import losses_utils

@@ -172,7 +172,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
     log("#### Init, Train ############################################################")
     # from config_model import map_model    
-    modelx = map_model(mo,el_name)
+    modelx = map_model(model_name)
     log2(modelx)
     modelx.reset()
     ###  data_pars_ref has NO data.

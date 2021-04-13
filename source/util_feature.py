@@ -1330,41 +1330,44 @@ def pd_stat_pandas_profile(df, savefile="report.html", title="Pandas Profile"):
     return colexclude
 
 
-def pd_stat_distribution_colnum(df):
-    """ Describe the tables
-   """
-    coldes = ["col", "coltype", "dtype", "count", "min", "max", "nb_na", "pct_na", "median", "mean", "std", "25%", "75%", "outlier",]
+def pd_stat_distribution_colnum(df, nrows=2000, verbose=False):
+    """ Stats the tables
+    """
+    df = df.sample(n=nrows)
+    coldes = ["col", "coltype",  "count", "min", "max",  "median", "mean", 
+              "std", "25%", "75%", "nb_na", "pct_na" ]
 
     def getstat(col):
+        """max, min, nb, nb_na, pct_na, median, qt_25, qt_75,
+           nb, nb_unique, nb_na, freq_1st, freq_2th, freq_3th
+           s.describe()
         """
-         max, min, nb, nb_na, pct_na, median, qt_25, qt_75,
-         nb, nb_unique, nb_na, freq_1st, freq_2th, freq_3th
-         s.describe()
-         count    3.0  mean     2.0 std      1.0
-         min      1.0   25%      1.5  50%      2.0
-         75%      2.5  max      3.0
-      """
-        ss = list(df[col].describe().values)
-        ss = [str(df[col].dtype)] + ss
-        nb_na = df[col].isnull().sum()
-        ntot = len(df)
-        ss = ss + [nb_na, nb_na / (ntot + 0.0)]
+        ss    = [col, str(df[col].dtype)] 
+        ss    = ss +list(df[col].describe().values) 
 
-        return pd.Series(
-            ss,
-            ["dtype", "count", "mean", "std", "min", "25%", "50%", "75%", "max", "nb_na", "pct_na"],
-        )
+        nb_na = df[col].isnull().sum()
+        ntot  = len(df)
+        ss    = ss + [nb_na, nb_na / (ntot + 0.0)]
+
+        return pd.DataFrame( [ss],  columns=coldes, )
 
     dfdes = pd.DataFrame([], columns=coldes)
-    cols = df.columns
+    cols  = df.columns
     for col in cols:
         dtype1 = str(df[col].dtype)
         if dtype1[0:3] in ["int", "flo"]:
-            row1 = getstat(col)
-            dfdes = pd.concat((dfdes, row1))
+            try :
+              row1  = getstat(col)
+              dfdes = pd.concat((dfdes, row1), axis=0)
+            except Exception as e:
+              print('error', col, e)  
 
         if dtype1 == "object":
             pass
+
+    dfdes.index = np.arange(0, len(dfdes))        
+    if verbose : print('Stats\n', dfdes)
+    return dfdes
 
 
 def pd_stat_histogram(df, bins=50, coltarget="diff"):
