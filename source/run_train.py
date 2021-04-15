@@ -1,10 +1,9 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
-
 python source/run_train.py  run_train --config_name elasticnet  --path_data_train data/input/train/    --path_output data/output/a01_elasticnet/
 
-activate py36 && python source/run_train.py  run_train   --n_sample 100  --config_name lightgbm  --path_model_config source/config_model.py  --path_output /data/output/a01_test/     --path_data_train /data/input/train/
+python source/run_train.py  run_train   --n_sample 100  --config_name lightgbm  --path_model_config source/config_model.py  --path_output /data/output/a01_test/     --path_data_train /data/input/train/
 
 """
 import warnings,sys, os, json, importlib, copy
@@ -49,7 +48,7 @@ def model_dict_load(model_dict, config_path, config_name, verbose=True):
     if model_dict is None :
       log("#### Model Params Dynamic loading  ###############################################")
       model_dict_fun = load_function_uri(uri_name=config_path + "::" + config_name)
-      model_dict    = model_dict_fun()   ### params 
+      model_dict     = model_dict_fun()   ### params
 
     else :
         ### Passing dict 
@@ -101,6 +100,7 @@ def map_model(model_name):
 
     return modelx
 
+
 def train(model_dict, dfX, cols_family, post_process_fun):
     """  Train the model using model_dict, save model, save prediction
     :param model_dict:  dict containing params
@@ -118,59 +118,64 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log2(data_pars['cols_model_type2'])
 
 
-    log("#### Model Input preparation ##################################################")
-    log2(dfX.shape)
-    dfX    = dfX.sample(frac=1.0)
-    itrain = int(0.6 * len(dfX))
-    ival   = int(0.8 * len(dfX))
+    log("#### Model Input : columns ##################################################")
     colsX  = data_pars['cols_model']
     coly   = data_pars['coly']
     log2('Model colsX',colsX)
     log2('Model coly', coly)
     log2('Model column type: ',data_pars['cols_model_type2'])
-
     ### Only Parameters
     data_pars_ref = copy.deepcopy(data_pars)
 
-    #### TODO : Lazy Dict to have large dataset
-    data_pars['data_type'] = 'ram'
-    data_pars['train'] = {'Xtrain' : dfX[colsX].iloc[:itrain, :],
-                          'ytrain' : dfX[coly].iloc[:itrain],
-                          'Xtest'  : dfX[colsX].iloc[itrain:ival, :],
-                          'ytest'  : dfX[coly].iloc[itrain:ival],
+    log("#### Model Input : Actual data split ########################################")
+    log2(dfX.shape)
+    dfX    = dfX.sample(frac=1.0)
+    itrain = int(0.6 * len(dfX))
+    ival   = int(0.8 * len(dfX))
 
-                          'Xval'   : dfX[colsX].iloc[ival:, :],
-                          'yval'   : dfX[coly].iloc[ival:],
-                          }
+    ###### Pass full Pandas dataframe
+    #### date_type :  'ram', 'pandas', tf_data,  torch_data,
+    data_pars['data_type'] = data_pars.get('data_type', 'ram')
+    data_pars['train'] = { 'Xtrain' : dfX[colsX].iloc[:itrain, :],
+                           'ytrain' : dfX[coly].iloc[:itrain],
+                           'Xtest'  : dfX[colsX].iloc[itrain:ival, :],
+                           'ytest'  : dfX[coly].iloc[itrain:ival],
+
+                           'Xval'   : dfX[colsX].iloc[ival:, :],
+                           'yval'   : dfX[coly].iloc[ival:],
+                         }
 
     """
-    ##### Lazy Dict mechanism
-    m = {'Xtrain'  : model_path + "/Xtrain/" ,
-          'ytrain' : model_path + "/ytrain/",
-          'Xtest'  : model_path + "/Xtest/",
-          'ytest'  : model_path + "/ytest/",
+    #### TODO : Lazy Dict to have large dataset
+    ##### Lazy Dict mechanism : Only path
+    m = {'Xtrain'  : model_path + "/train/Xtrain/" ,
+          'ytrain' : model_path + "/train/ytrain/",
+          'Xtest'  : model_path + "/train/Xtest/",
+          'ytest'  : model_path + "/train/ytest/",
     
-          'Xval'   : model_path + "/Xval/",
-          'yval'   : model_path + "/yval/",
+          'Xval'   : model_path + "/train/Xval/",
+          'yval'   : model_path + "/train/yval/",
           }
+          
+    for key, path in m.items() :
+       os.makedirs(path, exist=True)      
 
     dfX[colsX].iloc[:itrain, :].to_parquet(m['Xtrain']  + "/file_01.parquet" )
     dfX[coly].iloc[:itrain].to_parquet(    m['ytrain']  + "/file_01.parquet" )
 
-    dfX[colsX].iloc[itrain:ival, :].to_parquet(m['Xval'] + "/file_01.parquet" )
-    dfX[coly].iloc[itrain:ival].to_parquet(   m['yval']  + "/file_01.parquet" )
+    dfX[colsX].iloc[itrain:ival, :].to_parquet(m['Xval']  + "/file_01.parquet" )
+    dfX[coly].iloc[itrain:ival].to_parquet(    m['yval']  + "/file_01.parquet" )
 
-    dfX[colsX].iloc[ival:, :].to_parquet(    m['Xval'] + "/file_01.parquet" )
+    dfX[colsX].iloc[ival:, :].to_parquet(   m['Xval']  + "/file_01.parquet" )
     dfX[coly].iloc[ival:].to_parquet(       m['yval']  + "/file_01.parquet"  )
+        
     
-    
-    data_pars['data_type'] = 'pandas'  ### Tf dataset, pytorch    
-    data_pars['train'] = m
+    #### date_type :  'ram', 'pandas', tf_data,  torch_data,
+    data_pars['data_type'] = data_pars.get('data_type', 'ram')  ### Tf dataset, pytorch    
+    data_pars['train']     = m
     """
 
-
-
-    log("#### Init, Train ############################################################")
+    log("#### Init, Train #############################################################")
     # from config_model import map_model    
     modelx = map_model(model_name)
     log2(modelx)
@@ -206,7 +211,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log2("Actual    : ",  dfX[coly ])
     log2("Prediction: ",  dfX[coly + '_pred'])
 
-    log("#### Metrics ###############################################################")
+    log("#### Metrics ################################################################")
     from util_feature import  metrics_eval
     metrics_test = metrics_eval(metric_list,
                                 ytrue       = dfX[coly].iloc[ival:],
@@ -216,7 +221,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log(stats)
 
 
-    log("### Saving model, dfX, columns #############################################")
+    log("### Saving model, dfX, columns ##############################################")
     log2(model_path + "/model.pkl")
     os.makedirs(model_path, exist_ok=True)
     save(colsX, model_path + "/colsX.pkl")
@@ -262,8 +267,7 @@ def cols_validate(model_dict):
 
 def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
               mode="run_preprocess", model_dict=None, return_mode='file', **kw):
-    """
-      Configuration of the model is in config_model.py file
+    """ Configuration of the model is
     :param config_name:
     :param config_path:
     :param n_sample:

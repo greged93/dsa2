@@ -121,7 +121,6 @@ if __name__ == '__main__':
     zip_path     = root + 'datasets/zip/*.zip'
 
 
-
     data_pars = {
 
         ### ModelTarget-Keyname : Path

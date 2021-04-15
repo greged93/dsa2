@@ -15,6 +15,9 @@ python  titanic_classifier.py  predict
 import warnings, copy, os, sys
 warnings.filterwarnings("ignore")
 
+DO_PROFILE = True
+
+
 ####################################################################################
 ###### Path ########################################################################
 root_repo      =  os.path.abspath(os.getcwd()).replace("\\", "/") + "/"     ; print(root_repo)
@@ -334,10 +337,19 @@ except : pass
 ###########################################################################################################
 ###########################################################################################################
 if __name__ == "__main__":
+    if DO_PROFILE :
+        from pyinstrument import Profiler
+        profiler = Profiler()
+        profiler.start()
+
+
     d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default }
     import fire
     fire.Fire(d)
-    
+
+    if DO_PROFILE :
+        profiler.stop()
+        print(profiler.output_text(unicode=True, color=True))
 
 
 

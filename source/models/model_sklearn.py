@@ -8,9 +8,9 @@
 import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
 
 ####################################################################################################
-try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
-except Exception as e : verbosity = 2
-#raise Exception(f"{e}")
+from utilmy import global_verbosity, os_makedirs
+
+verbosity = global_verbosity(__file__, "/../../config.json" ,default= 5)
 
 def log(*s):
     print(*s, flush=True)
@@ -20,10 +20,6 @@ def log2(*s):
 
 def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
-
-def os_makedirs(dir_or_file):
-    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
-    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
 
 ####################################################################################################
 global model, session
@@ -119,30 +115,6 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
         model.model.fit(Xtrain, ytrain, **compute_pars.get("compute_pars", {}))
 
 
-def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
-    """
-       Return metrics of the model when fitted.
-    """
-    global model, session
-    data_pars['train'] = True
-    Xval, yval = get_dataset(data_pars, task_type="eval")
-    ypred = predict(Xval, data_pars, compute_pars, out_pars)
-
-    # log(data_pars)
-    mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
-
-    scorer = {
-        "rmse": sklearn.metrics.mean_squared_error,
-        "mae": sklearn.metrics.mean_absolute_error
-    }[mpars['metric_name']]
-
-    mpars2 = mpars.get("metrics_pars", {})  ##Specific to score
-    score_val = scorer(yval, ypred, **mpars2)
-    ddict = [{"metric_val": score_val, 'metric_name': mpars['metric_name']}]
-
-    return ddict
-
-
 def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     global model, session
 
@@ -193,36 +165,6 @@ def load_info(path=""):
             key = fp.split("/")[-1]
             dd[key] = obj
     return dd
-
-
-def preprocess(prepro_pars):
-    if prepro_pars['type'] == 'test':
-        from sklearn.datasets import make_classification
-        from sklearn.model_selection import train_test_split
-
-        X, y = make_classification(n_features=10, n_redundant=0, n_informative=2,
-                                   random_state=1, n_clusters_per_class=1)
-
-        # log(X,y)
-        Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)
-        return Xtrain, ytrain, Xtest, ytest
-
-    if prepro_pars['type'] == 'train':
-        from sklearn.model_selection import train_test_split
-        df = pd.read_csv(prepro_pars['path'])
-        dfX = df[prepro_pars['colX']]
-        dfy = df[prepro_pars['coly']]
-        Xtrain, Xtest, ytrain, ytest = train_test_split(dfX.values, dfy.values,
-                                                        stratify=dfy.values,test_size=0.1)
-        return Xtrain, ytrain, Xtest, ytest
-
-    else:
-        df = pd.read_csv(prepro_pars['path'])
-        dfX = df[prepro_pars['colX']]
-
-        Xtest, ytest = dfX, None
-        return None, None, Xtest, ytest
-
 
 ####################################################################################################
 THISMODEL_COLGROUPS = []
@@ -279,23 +221,19 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
       "file" :
     """
     # log(data_pars)
-    data_type = data_pars.get('type', 'ram')
+    data_type            = data_pars.get('type', 'ram')
+    d                    = data_pars[task_type]
+    data_pars[task_type] = None    ### Save memory
 
     if task_type == "predict":
-        d = data_pars[task_type]
-        data_pars[task_type] = None    ### Save memory
         d = get_dataset_split_for_model(d, data_pars )
         return d["X"]
 
     if task_type == "eval":
-        d = data_pars[task_type]
-        data_pars[task_type] = None
         d = get_dataset_split_for_model(d, data_pars )
         return d["X"], d["y"]
 
     if task_type == "train":
-        d = data_pars[task_type]
-        data_pars[task_type] = None
         d = get_dataset_split_for_model(d, data_pars )
         return d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
 
@@ -330,10 +268,6 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
-
-
-
-
 def get_params_sklearn(deep=False):
     return model.model.get_params(deep=deep)
 
@@ -358,47 +292,17 @@ def get_params(param_pars={}, **kw):
 
 
 #################################################################################################################
-def test_dataset_classi_fake(nrows=500):
-    from sklearn import datasets as sklearn_datasets
-    ndim=11
-    coly   = 'y'
-    colnum = ["colnum_" +str(i) for i in range(0, ndim) ]
-    colcat = ['colcat_1']
-    X, y    = sklearn_datasets.make_classification(
-              n_samples=10000, n_features=ndim, n_classes=1, n_redundant = 0, n_informative=ndim )
-    df = pd.DataFrame(X,  columns= colnum)
-    for ci in colcat :
-      df[ci] = np.random.randint(0,1, len(df))
-    df[coly]   = y.reshape(-1, 1)
-    # log(df)
-    return df, colnum, colcat, coly
-
-
-def train_test_split2(df, coly):
-    log3(df.dtypes)
-    y = df[coly] ### If clonassificati
-    X = df.drop(coly,  axis=1)
-    log3('y', np.sum(y[y==1]) , X.head(3))
-    ######### Split the df into train/test subsets
-    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)
-    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021)
-
-    #####
-    # y = y.astype('uint8')
-    num_classes                                = len(set(y_train_full.values.ravel()))
-
-    return X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes
-
-
 def test(n_sample          = 1000):
-    df, colnum, colcat, coly = test_dataset_classi_fake(nrows= n_sample)
-    X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = train_test_split2(df, coly)
+
+    from adatasets import test_dataset_classification_fake, pd_train_test_split2
+    df, d = test_dataset_classification_fake(nrows= n_sample)
+    colnum, colcat, coly = d['colnum'], d['colcat'], d['coly']
+    X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = pd_train_test_split2(df, coly)
   
     cols_input_type_1 = []
     #### Matching Big dict  ##################################################
     def post_process_fun(y): return int(y)
     def pre_process_fun(y):  return int(y)
-
 
     m = {
     'model_pars': {
@@ -428,23 +332,22 @@ def test(n_sample          = 1000):
         'download_pars' : None,
         'cols_input_type' : cols_input_type_1,
         ### family of columns for MODEL  #########################################################
-        'cols_model_group': [ 'colnum_bin',   'colcat_bin',
-                            ]
+        'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
 
         ,'cols_model_group_custom' :  { 'colnum' : colnum,
                                         'colcat' : colcat,
                                         'coly' : coly
-                            }
+                                      }
         ###################################################  
-        ,'train': {'Xtrain': X_train, 'ytrain': y_train,
-                   'Xtest': X_valid,  'ytest':  y_valid},
-                'eval': {'X': X_valid,  'y': y_valid},
-                'predict': {'X': X_valid}
+        ,'train': {'Xtrain':    X_train, 'ytrain': y_train,
+                   'Xtest':     X_valid,  'ytest':  y_valid},
+                   'eval':    {'X': X_valid,  'y': y_valid},
+                   'predict': {'X': X_valid}
 
         ### Filter data rows   ##################################################################
         ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
 
-        
+
         ### Added continuous & sparse features groups ###
         'cols_model_type2': {
             'colcontinuous':   colnum ,
@@ -456,7 +359,6 @@ def test(n_sample          = 1000):
     ##### Running loop
     """https://github.com/manujosephv/pytorch_tabular/blob/main/tests/test_mdn.py
     
-
     """
     ll = [
         ('torch_tabular.py::CategoryEmbeddingModelConfig', 
@@ -553,3 +455,60 @@ if __name__ == "__main__":
     fire.Fire()
 
 
+
+
+
+
+
+
+def zz_eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
+    """
+       Return metrics of the model when fitted.
+    """
+    global model, session
+    data_pars['train'] = True
+    Xval, yval = get_dataset(data_pars, task_type="eval")
+    ypred = predict(Xval, data_pars, compute_pars, out_pars)
+
+    # log(data_pars)
+    mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
+
+    scorer = {
+        "rmse": sklearn.metrics.mean_squared_error,
+        "mae": sklearn.metrics.mean_absolute_error
+    }[mpars['metric_name']]
+
+    mpars2 = mpars.get("metrics_pars", {})  ##Specific to score
+    score_val = scorer(yval, ypred, **mpars2)
+    ddict = [{"metric_val": score_val, 'metric_name': mpars['metric_name']}]
+
+    return ddict
+
+
+def zz_preprocess(prepro_pars):
+    if prepro_pars['type'] == 'test':
+        from sklearn.datasets import make_classification
+        from sklearn.model_selection import train_test_split
+
+        X, y = make_classification(n_features=10, n_redundant=0, n_informative=2,
+                                   random_state=1, n_clusters_per_class=1)
+
+        # log(X,y)
+        Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)
+        return Xtrain, ytrain, Xtest, ytest
+
+    if prepro_pars['type'] == 'train':
+        from sklearn.model_selection import train_test_split
+        df = pd.read_csv(prepro_pars['path'])
+        dfX = df[prepro_pars['colX']]
+        dfy = df[prepro_pars['coly']]
+        Xtrain, Xtest, ytrain, ytest = train_test_split(dfX.values, dfy.values,
+                                                        stratify=dfy.values,test_size=0.1)
+        return Xtrain, ytrain, Xtest, ytest
+
+    else:
+        df = pd.read_csv(prepro_pars['path'])
+        dfX = df[prepro_pars['colX']]
+
+        Xtest, ytest = dfX, None
+        return None, None, Xtest, ytest

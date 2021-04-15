@@ -766,7 +766,7 @@ def test_dataset_petfinder(nrows=1000):
 
 
 def train_test_split2(df, coly):
-    log3(df.dtypes)~
+    # log3(df.dtypes)
     y = df[coly] ### If clonassificati
     X = df.drop(coly,  axis=1)
     log3('y', np.sum(y[y==1]) , X.head(3))
