@@ -95,7 +95,7 @@ def map_model(model_name):
     except :
         ### All SKLEARN API
         ### ['ElasticNet', 'ElasticNetCV', 'LGBMRegressor', 'LGBMModel', 'TweedieRegressor', 'Ridge']:
-       mod    = 'models.model_sklearn'
+       mod    = 'models.model_outlier'
        modelx = importlib.import_module(mod)
     return modelx
 
@@ -165,7 +165,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     
 
     log("#### Init, Train #############################################################")
-    # from config_model import map_model    
+    # from config_model import map_model   
     modelx = map_model(model_name)
     log2(modelx)
     modelx.reset()

@@ -97,7 +97,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     global model, session
     session = None  # Session type for compute
-    Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
+    Xtrain, ytrain, Xtest, ytest = get_dataset2(data_pars, task_type="train")
     log2(Xtrain.shape, model.model)
 
     if  model.model_pars['model_class'] in [ 'HBOS', 'ABOD'  ]:  ## Numba issues
@@ -209,16 +209,16 @@ def get_dataset_split_for_model_pandastuple(Xtrain, ytrain=None, data_pars=None,
     :return:
     """
     from utilmy import pd_read_file
-    coldataloader_received,  = data_pars.get('cols_model_type2', {})
+    coldataloader_received  = data_pars.get('cols_model_type2', {})
     colmodel_ref             = THISMODEL_COLGROUPS
 
     ### Into RAM
-    if isinstance(Xtrain, str) : Xtrain = pd_read_file(Xtrain, verbose=False)
-    if isinstance(ytrain, str) : ytrain = pd_read_file(ytrain, verbose=False)
+    if isinstance(Xtrain, str) : Xtrain = pd_read_file(Xtrain + "*", verbose=False)
+    if isinstance(ytrain, str) : ytrain = pd_read_file(ytrain + "*", verbose=False)
 
 
     if len(colmodel_ref) <= 1 :   ## No split
-        return Xtrain
+        return Xtrain, ytrain
 
     ### Split the pandas columns into different pieces  ######################
     Xtuple_train = []
@@ -243,6 +243,30 @@ def get_dataset_split_for_model(d, data_pars):
      if 'X'  in d :
          Xtrain, _ = get_dataset_split_for_model_pandastuple(d['X'], None,  data_pars)
          return Xtrain, None
+
+
+def get_dataset2(data_pars=None, task_type="train", **kw):
+    """
+      "ram"  :
+      "file" :
+    """
+    # log(data_pars)
+    data_type            = data_pars.get('type', 'ram')
+    d                    = data_pars[task_type]
+    data_pars[task_type] = None    ### Save memory
+
+    if task_type == "predict":
+        d["X"], = get_dataset_split_for_model(d, data_pars )
+        return d["X"]
+
+    if task_type == "eval":
+        d["X"],d["y"] = get_dataset_split_for_model(d, data_pars )
+        return d["X"], d["y"]
+
+    if task_type == "train":
+        d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"] = get_dataset_split_for_model(d, data_pars )
+        return d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
+
 
 
 def get_dataset(data_pars=None, task_type="train", **kw):

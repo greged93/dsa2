@@ -2,15 +2,18 @@
 # -*- coding: utf-8 -*-
 """
 ### Usage:
-  ipython titanic_gefs.py  train      --config  config1  --pdb
-  ipython titanic_gefs.py  predict    --config  config1
-ipython  titanic_gefs.py  data_profile
-ipython  titanic_gefs.py  preprocess  --nsample 100
-ipython  titanic_gefs.py  train       --nsample 200
-ipython  titanic_gefs.py  predict
+  python titanic_classifier.py  train      --config  config1
+  python titanic_classifier.py  predict    --config  config1
+python  titanic_classifier.py  data_profile
+python  titanic_classifier.py  preprocess  --nsample 100
+python  titanic_classifier.py  train       --nsample 200
+python  titanic_classifier.py  predict
 """
 import warnings, copy, os, sys
 warnings.filterwarnings("ignore")
+
+DO_PROFILE = True
+
 
 ####################################################################################
 ###### Path ########################################################################
@@ -82,7 +85,7 @@ def config1() :
        used for titanic classification task
     """
     data_name    = "titanic"         ### in data/input/
-    model_class  = "model_gefs.py::Model"  ### ACTUAL Class name for model_sklearn.py
+    model_class  = "LGBMClassifier"  ### ACTUAL Class name for model_sklearn.py
     n_sample     = 1000
 
     def post_process_fun(y):   ### After prediction is done
@@ -95,7 +98,11 @@ def config1() :
     model_dict = {"model_pars": {
         ### LightGBM API model   #######################################
          "model_class": model_class
-        ,"model_pars" : {'cat': 10, 'n_estimators': 5
+        ,"model_pars" : {"objective": "binary",
+                           "n_estimators": 10,
+                           "learning_rate":0.001,
+                           "boosting_type":"gbdt",     ### Model hyperparameters
+                           "early_stopping_rounds": 5
                         }
 
         , "post_process_fun" : post_process_fun   ### After prediction  ##########################################
@@ -114,6 +121,14 @@ def config1() :
         #### catcol INTO integer,   colcat into OneHot
         {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
         {"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
+
+
+        ### Cross_feat = feat1 X feat2
+        {"uri": "source/prepro.py::pd_colcross",             "pars": {}, "cols_family": "colcross",   "cols_out": "colcross_pair",  "type": "cross"},
+
+
+        #### Example of Custom processor
+        {"uri":  THIS_FILEPATH + "::pd_col_myfun",   "pars": {}, "cols_family": "colnum",   "cols_out": "col_myfun",  "type": "" },                
 
         ],
                }
@@ -136,7 +151,12 @@ def config1() :
           #  "colcross_single_onehot_select", "colcross_pair_onehot",  "colcross_pair",  #### colcross columns  "coldate", "coltext",
           "cols_model_group": [ "colnum_bin",
                                 "colcat_bin",
-
+                                # "coltext",
+                                # "coldate",
+                                "colcross_pair",
+                               
+                               ### example of custom
+                               "col_myfun"
                               ]
 
       #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
@@ -156,6 +176,38 @@ def config1() :
     model_dict        = global_pars_update(model_dict, data_name, config_name=os_get_function_name() )
     return model_dict
 
+
+
+def pd_col_myfun(df=None, col=None, pars={}):
+    """
+         Example of custom Processor
+    """
+    from source.util_feature import save, load
+    prefix = "col_myfun`"
+    if "path_pipeline" in pars :   #### Inference time LOAD previous pars
+        prepro   = load(pars["path_pipeline"] + f"/{prefix}_model.pkl" )
+        pars     = load(pars["path_pipeline"] + f"/{prefix}_pars.pkl" )
+        pars     = {} if pars is None else  pars
+    #### Do something #################################################################
+    df_new         = df[col]  ### Do nithi
+    df_new.columns = [  col + "_myfun"  for col in df.columns ]
+    cols_new       = list(df_new.columns)
+
+    prepro   = None
+    pars_new = None
+
+
+    ###################################################################################
+    if "path_features_store" in pars and "path_pipeline_export" in pars:
+       save(prepro,         pars["path_pipeline_export"] + f"/{prefix}_model.pkl" )
+       save(cols_new,       pars["path_pipeline_export"] + f"/{prefix}.pkl" )
+       save(pars_new,       pars["path_pipeline_export"] + f"/{prefix}_pars.pkl" )
+
+    col_pars = {"prefix" : prefix , "path" :   pars.get("path_pipeline_export", pars.get("path_pipeline", None)) }
+    col_pars["cols_new"] = {
+        "col_myfun" :  cols_new  ### list
+    }
+    return df_new, col_pars
 
 
 
@@ -215,6 +267,13 @@ from core_run import train
 
 
 
+###################################################################################
+######### Check data ##############################################################
+def check():
+   pass
+
+
+
 
 ####################################################################################
 ####### Inference ##################################################################
@@ -237,11 +296,46 @@ def predict(config=None, nsample=None):
                               )
 """
 
+#################################################################################
+####### Deploy ##################################################################
+#### Libraries for fastapi modeling ####
+try :
+  from typing import List
+  from pydantic import BaseModel
+
+  #### Model for Body Request FastAPI #####
+  class BodyOne(BaseModel):
+      Age: int
+      Embarked: str
+      Fare: float
+      Name: str
+      Parch: int
+      Sex: str
+      SibSp: int
+      Ticket: int
+      Pclass: int
+
+  #### List of Inferences for predict as Batch ####
+  class BodyBatch(BaseModel):
+      Batch: List[BodyOne]
+        
+except : pass
+
 
 
 ###########################################################################################################
 ###########################################################################################################
 if __name__ == "__main__":
+    if DO_PROFILE :
+        from pyinstrument import Profiler
+        profiler = Profiler()
+        profiler.start()
+
+
     d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default }
     import fire
     fire.Fire(d)
+
+    if DO_PROFILE :
+        profiler.stop()
+        print(profiler.output_text(unicode=True, color=True))
