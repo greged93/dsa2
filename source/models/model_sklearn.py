@@ -106,7 +106,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     global model, session
     session = None  # Session type for compute
-    Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
+    Xtrain, ytrain, Xtest, ytest = get_dataset2(data_pars, task_type="train")
     log(Xtrain.shape, model.model)
 
     if "LGBM" in model.model_pars['model_class']:
@@ -166,6 +166,71 @@ def load_info(path=""):
             dd[key] = obj
     return dd
 
+
+def pd_read_file(path_glob="*.pkl", ignore_index=True,  cols=None,
+                 verbose=False, nrows=-1, concat_sort=True, n_pool=1, drop_duplicates=None, col_filter=None,  col_filter_val=None,  **kw):
+  """
+      Read file in parallel from disk : very Fast
+  :param path_glob:
+  :param ignore_index:
+  :param cols:
+  :param verbose:
+  :param nrows:
+  :param concat_sort:
+  :param n_pool:
+  :param drop_duplicates:
+  :param shop_id:
+  :param kw:
+  :return:
+  """
+  import glob, gc,  pandas as pd, os
+  readers = {
+          ".pkl"     : pd.read_pickle,
+          ".parquet" : pd.read_parquet,
+          ".csv"     : pd.read_csv,
+          ".txt"     : pd.read_csv,
+          ".zip"     : pd.read_csv,
+          ".gzip"    : pd.read_csv,
+   }
+  from multiprocessing.pool import ThreadPool
+  pool = ThreadPool(processes=n_pool)
+
+  file_list = glob.glob(path_glob+"*.*")
+  # print("ok", verbose)
+  dfall  = pd.DataFrame()
+  n_file = len(file_list)
+  m_job  = n_file // n_pool  if n_file > 1 else 1
+
+  if verbose : log(n_file,  n_file // n_pool )
+  for j in range(0, m_job ) :
+      log("Pool", j)
+      job_list =[]
+      for i in range(n_pool):
+         if n_pool*j + i >= n_file  : break
+         filei         = file_list[n_pool*j + i]
+         ext           = os.path.splitext(filei)[1]
+         pd_reader_obj = readers[ext]
+         job_list.append( pool.apply_async(pd_reader_obj, (filei, )))
+         if verbose :
+            log(j, filei)
+
+      for i in range(n_pool):
+        if i >= len(job_list): break
+        dfi   = job_list[ i].get()
+        if col_filter is not None : dfi = dfi[ dfi[col_filter] == col_filter_val ]
+        if cols is not None :       dfi = dfi[cols]
+        if nrows > 0        :       dfi = dfi.iloc[:nrows,:]
+        if drop_duplicates is not None  : dfi = dfi.drop_duplicates(drop_duplicates)
+        gc.collect()
+
+        dfall = pd.concat( (dfall, dfi), ignore_index=ignore_index, sort= concat_sort)
+        #log("Len", n_pool*j + i, len(dfall))
+        del dfi; gc.collect()
+
+  if verbose : log(n_file, j * n_file//n_pool )
+  return dfall
+
+
 ####################################################################################################
 THISMODEL_COLGROUPS = []
 def get_dataset_split_for_model_pandastuple(Xtrain, ytrain=None, data_pars=None, ):
@@ -177,17 +242,16 @@ def get_dataset_split_for_model_pandastuple(Xtrain, ytrain=None, data_pars=None,
     :param colmodel_ref:
     :return:
     """
-    from utilmy import pd_read_file
-    coldataloader_received,  = data_pars.get('cols_model_type2', {})
+    #from utilmy import pd_read_file
+    coldataloader_received  = data_pars.get('cols_model_type2', {})
     colmodel_ref             = THISMODEL_COLGROUPS
 
     ### Into RAM
-    if isinstance(Xtrain, str) : Xtrain = pd_read_file(Xtrain, verbose=False)
+    if isinstance(Xtrain, str) : Xtrain = pd_read_file(Xtrain, verbose=True)
     if isinstance(ytrain, str) : ytrain = pd_read_file(ytrain, verbose=False)
-
-
+    log("Ytrain",ytrain)
     if len(colmodel_ref) <= 1 :   ## No split
-        return Xtrain
+        return Xtrain, ytrain
 
     ### Split the pandas columns into different pieces  ######################
     Xtuple_train = []
@@ -226,15 +290,15 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
     data_pars[task_type] = None    ### Save memory
 
     if task_type == "predict":
-        d = get_dataset_split_for_model(d, data_pars )
+        d["X"], = get_dataset_split_for_model(d, data_pars )
         return d["X"]
 
     if task_type == "eval":
-        d = get_dataset_split_for_model(d, data_pars )
+        d["X"],d["y"] = get_dataset_split_for_model(d, data_pars )
         return d["X"], d["y"]
 
     if task_type == "train":
-        d = get_dataset_split_for_model(d, data_pars )
+        d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"] = get_dataset_split_for_model(d, data_pars )
         return d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
 
 

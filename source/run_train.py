@@ -97,7 +97,6 @@ def map_model(model_name):
         ### ['ElasticNet', 'ElasticNetCV', 'LGBMRegressor', 'LGBMModel', 'TweedieRegressor', 'Ridge']:
        mod    = 'models.model_sklearn'
        modelx = importlib.import_module(mod)
-
     return modelx
 
 
@@ -136,44 +135,34 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     ###### Pass full Pandas dataframe
     #### date_type :  'ram', 'pandas', tf_data,  torch_data,
     data_pars['data_type'] = data_pars.get('data_type', 'ram')
-    data_pars['train'] = { 'Xtrain' : dfX[colsX].iloc[:itrain, :],
-                           'ytrain' : dfX[coly].iloc[:itrain],
-                           'Xtest'  : dfX[colsX].iloc[itrain:ival, :],
-                           'ytest'  : dfX[coly].iloc[itrain:ival],
+    data_pars['train'] = {}
 
-                           'Xval'   : dfX[colsX].iloc[ival:, :],
-                           'yval'   : dfX[coly].iloc[ival:],
-                         }
-
-    """
     #### TODO : Lazy Dict to have large dataset
     ##### Lazy Dict mechanism : Only path
-    m = {'Xtrain'  : model_path + "/train/Xtrain/" ,
-          'ytrain' : model_path + "/train/ytrain/",
-          'Xtest'  : model_path + "/train/Xtest/",
-          'ytest'  : model_path + "/train/ytest/",
+    m = {'Xtrain'  : model_path + "train/Xtrain/" ,
+          'ytrain' : model_path + "train/ytrain/",
+          'Xtest'  : model_path + "train/Xtest/",
+          'ytest'  : model_path + "train/ytest/",
     
-          'Xval'   : model_path + "/train/Xval/",
-          'yval'   : model_path + "/train/yval/",
+          'Xval'   : model_path + "train/Xval/",
+          'yval'   : model_path + "train/yval/",
           }
-          
     for key, path in m.items() :
-       os.makedirs(path, exist=True)      
-
+       os.makedirs(path, exist_ok =True)   
     dfX[colsX].iloc[:itrain, :].to_parquet(m['Xtrain']  + "/file_01.parquet" )
-    dfX[coly].iloc[:itrain].to_parquet(    m['ytrain']  + "/file_01.parquet" )
+    dfX[[coly]].iloc[:itrain].to_parquet(    m['ytrain']  + "/file_01.parquet" )
 
-    dfX[colsX].iloc[itrain:ival, :].to_parquet(m['Xval']  + "/file_01.parquet" )
-    dfX[coly].iloc[itrain:ival].to_parquet(    m['yval']  + "/file_01.parquet" )
+    dfX[colsX].iloc[itrain:ival, :].to_parquet(m['Xtest']  + "/file_01.parquet" )
+    dfX[[coly]].iloc[itrain:ival].to_parquet(    m['ytest']  + "/file_01.parquet" )
 
     dfX[colsX].iloc[ival:, :].to_parquet(   m['Xval']  + "/file_01.parquet" )
-    dfX[coly].iloc[ival:].to_parquet(       m['yval']  + "/file_01.parquet"  )
+    dfX[[coly]].iloc[ival:].to_parquet(       m['yval']  + "/file_01.parquet"  )
         
     
     #### date_type :  'ram', 'pandas', tf_data,  torch_data,
     data_pars['data_type'] = data_pars.get('data_type', 'ram')  ### Tf dataset, pytorch    
     data_pars['train']     = m
-    """
+    
 
     log("#### Init, Train #############################################################")
     # from config_model import map_model    
@@ -433,7 +422,6 @@ def mlflow_register(dfXy, model_dict: dict, stats: dict, mlflow_pars:dict ):
 if __name__ == "__main__":
     import fire
     fire.Fire()
-
 
 
 
