@@ -265,7 +265,6 @@ def pd_read_file(path_glob="*.pkl", ignore_index=True,  cols=None,
   m_job  = n_file // n_pool  if n_file > 1 else 1
 
   if verbose : log(n_file,  n_file // n_pool )
-  log("Hello",file_list)
   for j in range(0, m_job ) :
       log("Pool", j, end=",")
       job_list =[]
