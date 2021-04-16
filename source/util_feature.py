@@ -503,7 +503,6 @@ def load_function_uri(uri_name="myfolder/myfile.py::myFunction"):
     package_path, class_name = pkg[0], pkg[1]
 
     package = package_path.replace("/", ".").replace(".py", "")
-
     try:
         #### Import from package mlmodels sub-folder
         return  getattr(importlib.import_module(package), class_name)

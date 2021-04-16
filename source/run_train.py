@@ -95,7 +95,7 @@ def map_model(model_name):
     except :
         ### All SKLEARN API
         ### ['ElasticNet', 'ElasticNetCV', 'LGBMRegressor', 'LGBMModel', 'TweedieRegressor', 'Ridge']:
-       mod    = 'models.model_outlier'
+       mod    = 'models.model_sklearn'
        modelx = importlib.import_module(mod)
     return modelx
 
@@ -135,7 +135,6 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     ###### Pass full Pandas dataframe
     #### date_type :  'ram', 'pandas', tf_data,  torch_data,
     data_pars['data_type'] = data_pars.get('data_type', 'ram')
-    data_pars['train'] = {}
 
     #### TODO : Lazy Dict to have large dataset
     ##### Lazy Dict mechanism : Only path
@@ -166,6 +165,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
     log("#### Init, Train #############################################################")
     # from config_model import map_model   
+    log("This is the model name",model_name)
     modelx = map_model(model_name)
     log2(modelx)
     modelx.reset()

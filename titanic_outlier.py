@@ -85,7 +85,7 @@ def config1() :
        used for titanic classification task
     """
     data_name    = "titanic"         ### in data/input/
-    model_class  = "LGBMClassifier"  ### ACTUAL Class name for model_sklearn.py
+    model_class  = "HBOS"  ### ACTUAL Class name for model_sklearn.py
     n_sample     = 1000
 
     def post_process_fun(y):   ### After prediction is done
