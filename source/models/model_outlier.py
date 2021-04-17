@@ -88,8 +88,6 @@ class Model(object):
             self.model_pars['model_class'] = self.model_pars['model_class'].split(":")[-1] 
 
             model_class = globals()[self.model_pars['model_class']]  ## globals() Buggy when doing loop
-            log("This is the model class",model_class)
-            log("This is the model_pars",self.model_pars['model_pars'])
             self.model  = model_class( **self.model_pars['model_pars'])
             log2(model_class, self.model)
 
