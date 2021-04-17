@@ -53,8 +53,7 @@ def global_pars_update(model_dict,  data_name, config_name,
 
     model_dict[ "global_pars"] = m
     return model_dict
-    """
-    print("config_name", config_name)
+    """print("config_name", config_name)
     root_repo2    =  os.path.abspath(os.getcwd()).replace("\\", "/")  ; print(root_repo)
 
 
@@ -103,7 +102,6 @@ def global_pars_update(model_dict,  data_name, config_name,
     model_dict[ 'global_pars'] = m
     return model_dict"""
 
-
 ####################################################################################
 config_default  = 'config1'   ### name of function which contains data configuration
 
@@ -111,6 +109,17 @@ config_default  = 'config1'   ### name of function which contains data configura
 
 ####################################################################################
 ##### Params########################################################################
+cols_input_type_1 = {
+     "coly"   :   "Survived"
+    ,"colid"  :   "PassengerId"
+    ,"colcat" :   ["Sex", "Embarked" ]
+    ,"colnum" :   ["Pclass", "Age","SibSp", "Parch","Fare"]
+    ,"coltext" :  []
+    ,"coldate" :  []
+    ,"colcross" : [ "Name", "Sex", "Ticket","Embarked","Pclass", "Age", "SibSp", ]
+}
+
+"""
 colnum  = ['ok']
 
 cols_input_type_1 = {
@@ -124,6 +133,7 @@ cols_input_type_1 = {
     ,"coldate"  : []
     ,"colcross" : []
 }
+"""
 
 
 
@@ -141,8 +151,8 @@ def  config_template(path_model_out="") :
     """
     """
     config_name  = os_get_function_name()
-    data_name    = "/hdfs/"   ### in data/input/
-    model_class  = 'source/models/moddel_outlier.py:HBOS'  ### ACTUAL Class name for model_sklearn.py
+    data_name    = "titanic"   ### in data/input/
+    model_class  = 'HBOS'  ### ACTUAL Class name for model_sklearn.py
     n_sample     = 10000
 
     model_dict = {"model_pars": {
@@ -266,7 +276,8 @@ def  config_template(path_model_out="") :
 
         ### Filter data rows   ##################################################################
        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
-       }
+       }  
+
     }"""
 
     ##### Filling Global parameters    ############################################################
@@ -292,14 +303,14 @@ def  train_test(nsample=100) :
         #
         # }),
 
-        # ( 'IForest' , { 'contamination' :0.01, 'n_estimators': 30, 'n_jobs': 4 } ),
+        ( 'IForest' , { 'contamination' :0.01, 'n_estimators': 30, 'n_jobs': 4 } ),
 
         
         ( 'HBOS'   , { 'contamination' : 0.01, 'n_bins' : 10, 'alpha' : 0.1, 'tol' : 0.5  } ),   
 
-        #( 'COPOD'   , { 'contamination' :0.01  } ),    ### Copula Based 2020
+        ( 'COPOD'   , { 'contamination' :0.01  } ),    ### Copula Based 2020
 
-        #( 'CBLOF'   , { 'n_clusters': 10   } ),  
+        ( 'CBLOF'   , { 'n_clusters': 10   } ),  
 
         #( 'LGBMClassifier' , { 'n_estimators': 10,} ),
 
@@ -309,15 +320,15 @@ def  train_test(nsample=100) :
         #( 'SOS'     , { 'contamination' :0.01, 'perplexity' :4.5, 'metric' : 'euclidean', n_jobs= 4 } ),  ### VERY SLOW
         
         ### VAE Serialization Error
-        # ( 'SO_GAAL' , { 'contamination' :0.01, 'stop_epochs' : 1, 'lr_d' :0.01, 'lr_g' : 0.0001, 'decay' :1e-06, 'momentum' : 0.9,  } ),   ## VAE keras
+        ( 'SO_GAAL' , { 'contamination' :0.01, 'stop_epochs' : 1, 'lr_d' :0.01, 'lr_g' : 0.0001, 'decay' :1e-06, 'momentum' : 0.9,  } ),   ## VAE keras
         
     ]
 
     feat_name = "train_smalll"
-    data_name = "/data1/"
+    data_name = "titanic"
     
     
-    #dir_data3     = "C:/D/gitdev/fraud/mldev/ztmp/rpp_fraud/"    
+    dir_data3     = "C:/D/gitdev/fraud/mldev/ztmp/rpp_fraud/"    
     dir_data3     = root_repo  + "/ztmp/"    ###  a/adigcb301/ipsvols05/scoupon/test_code/fraud/mldev/ztmp    
     dir_input3_tr = dir_data3 + f"/input/features/202011/{feat_name}/"  
     dir_input3_te = dir_data3 + f"/input/features/202011/{feat_name}/"  
@@ -329,20 +340,46 @@ def  train_test(nsample=100) :
 
         
         config_name = "config_" + m
-        model_dict  = global_pars_update(model_dict, data_name, config_name,
-                                 dir_data    = dir_data3,
-                                 dir_input_tr= dir_input3_tr,
-                                 dir_input_te= dir_input3_te
-                              )
+        model_dict  = global_pars_update(model_dict, data_name, config_name)
 
-        run_train.run_train(config_name       =  None, #'config1',  
-                            config_path       =  None, # THIS_FILEPATH,
+        run_train.run_train(config_name       =  "config1", #'config1',  
+                            config_path       =  THIS_FILEPATH, # THIS_FILEPATH,
                             n_sample          =  nsample,
                             model_dict        =  model_dict
                             # use_mlmflow     =  False
                             )
         # sys.exit()
 
+def pd_col_myfun(df=None, col=None, pars={}):
+    """
+         Example of custom Processor
+    """
+    from source.util_feature import save, load
+    prefix = "col_myfun`"
+    if "path_pipeline" in pars :   #### Inference time LOAD previous pars
+        prepro   = load(pars["path_pipeline"] + f"/{prefix}_model.pkl" )
+        pars     = load(pars["path_pipeline"] + f"/{prefix}_pars.pkl" )
+        pars     = {} if pars is None else  pars
+    #### Do something #################################################################
+    df_new         = df[col]  ### Do nithi
+    df_new.columns = [  col + "_myfun"  for col in df.columns ]
+    cols_new       = list(df_new.columns)
+
+    prepro   = None
+    pars_new = None
+
+
+    ###################################################################################
+    if "path_features_store" in pars and "path_pipeline_export" in pars:
+       save(prepro,         pars["path_pipeline_export"] + f"/{prefix}_model.pkl" )
+       save(cols_new,       pars["path_pipeline_export"] + f"/{prefix}.pkl" )
+       save(pars_new,       pars["path_pipeline_export"] + f"/{prefix}_pars.pkl" )
+
+    col_pars = {"prefix" : prefix , "path" :   pars.get("path_pipeline_export", pars.get("path_pipeline", None)) }
+    col_pars["cols_new"] = {
+        "col_myfun" :  cols_new  ### list
+    }
+    return df_new, col_pars
         
   
 
@@ -366,4 +403,3 @@ from core_run import predict
 if __name__ == "__main__":
     import fire
     fire.Fire()
-    
