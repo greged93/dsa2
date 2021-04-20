@@ -367,9 +367,11 @@ def get_dataset_split_for_model(d, data_pars):
          Xtrain, ytrain = get_dataset_split_for_model_pandastuple(d['Xtrain'], d['ytrain'],  data_pars)
          Xtest, ytest   = get_dataset_split_for_model_pandastuple(d['Xtest'], d['ytest'],    data_pars)
          return Xtrain, ytrain, Xtest, ytest
+
      if 'X' in d and 'y' in d :
          Xtrain, ytrain = get_dataset_split_for_model_pandastuple(d['X'], d['y'],  data_pars)
          return Xtrain, ytrain
+
      if 'X'  in d :
          Xtrain, _ = get_dataset_split_for_model_pandastuple(d['X'], None,  data_pars)
          return Xtrain, None
