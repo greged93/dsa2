@@ -109,7 +109,7 @@ def data_split(dfX, data_pars, model_path, colsX, coly):
     import pandas as pd
 
     ##### Dense Dict : not good  #################################################
-    if data_pars['date_type'] == 'ram':
+    if data_pars['data_type'] == 'ram':
         log2(dfX.shape)
         dfX    = dfX.sample(frac=1.0)
         itrain = int(0.6 * len(dfX))
@@ -212,7 +212,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
     log("#### Model Input : Actual data split ########################################")
     #### date_type :  'ram', 'pandas', tf_data,  torch_data,
-    data_pars['data_type'] = data_pars.get('data_type', 'ram')
+    data_pars['data_type'] = data_pars.get('data_type', 'torch_data')
 
 
     ###### Pass full Pandas dataframe  ################################################
@@ -232,8 +232,9 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     """
     #### TODO : Lazy Dict to have large dataset
     ##### Lazy Dict mechanism : Only path
-    data_pars = data_split(dfX, data_pars, model_path, colsX, coly)
     """
+    data_pars = data_split(dfX, data_pars, model_path, colsX, coly)
+  
 
 
 
