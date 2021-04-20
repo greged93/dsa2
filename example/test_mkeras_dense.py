@@ -1,7 +1,10 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
+
   python example/test_mkeras.py  train    --config config1
+
+
 """
 import warnings, copy, os, sys
 warnings.filterwarnings("ignore")
@@ -19,7 +22,7 @@ def global_pars_update(model_dict,  data_name, config_name):
     dir_data  = root_repo + "/data/"  ; print("dir_data", dir_data)
 
     m                      = {}
-    m["config_path"]       = THIS_FILEPATH
+    m["config_path"]       = THIS_FILEPATH  
     m["config_name"]       = config_name
 
     #### peoprocess input path
@@ -76,7 +79,7 @@ def config1() :
        ONE SINGLE DICT Contains all needed informations for  used for titanic classification task
     """
     data_name    = "titanic"         ### in data/input/
-    model_class  = "source/models/keras_widedeep.py::WideDeep_sparse"  ### ACTUAL Class name for
+    model_class  = "source/models/keras_widedeep_dense.py"  ### ACTUAL Class name for
     n_sample     = 1000
 
     def post_process_fun(y):   ### After prediction is done
@@ -97,10 +100,18 @@ def config1() :
 
         ### Pipeline for data processing ##############################
         "pipe_list": [
-          {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
-          {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-          {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+          {"uri": "source/prepro.py::pd_coly",                 "pars": {}, "cols_family": "coly",       "cols_out": "coly",           "type": "coly"         },
+
+          {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
+          {"uri": "source/prepro.py::pd_colnum_binto_onehot",  "pars": {}, "cols_family": "colnum_bin", "cols_out": "colnum_onehot",  "type": ""             },
+
+
+          {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
+          {"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
+
+
           #### neeed to 0-1 Normalize the input
+          # {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
 
         ],
         }},
@@ -118,12 +129,12 @@ def config1() :
           "cols_input_type" : cols_input_type_1,
 
           ### family of columns used for model input  #########################################################
-          "cols_model_group": [ "colnum",  "colcat",
+          "cols_model_group": [ "colnum_onehot",  "colcat_onehot",
                               ]
 
          ,'cols_model_type' : {
-              'cols_cross_input':  [ "colcat", ],
-              'cols_deep_input':   [ 'colnum',  ],
+              'cols_cross_input':  [ "colcat_onehot", ],
+              'cols_deep_input':   ['colnum_onehot',  ],
           }
 
           ### Filter data rows   ##################################################################
@@ -134,43 +145,6 @@ def config1() :
 
     ##### Filling Global parameters    ############################################################
     model_dict        = global_pars_update(model_dict, data_name, config_name=os_get_function_name() )
-
-    # Read train features
-    import pandas as pd
-    import zipfile
-    from io import StringIO
-    import numpy as np
-
-    #feature_arc = zipfile.ZipFile(model_dict['global_pars']['path_data_preprocess'] + 'features.zip', 'r')
-    #df_bytes = feature_arc.read('features.csv')
-    #df = pd.read_csv(StringIO(df_bytes.decode('utf-8')))
-    df = pd.read_csv( model_dict['global_pars']['path_data_preprocess'] + 'features.zip' )
-
-    colnum = model_dict['data_pars']['cols_input_type']['colnum']
-    coly   = model_dict['data_pars']['cols_input_type']['coly']
-
-
-    # Add "colcat_unique" key
-    colcat = model_dict['data_pars']['cols_input_type']['colcat']
-    colcat_unique = {col: list(df[col].unique()) for col in colcat}
-    model_dict['data_pars']['cols_input_type']['colcat_unique'] = colcat_unique,
-
-
-    # Add "colembed_dict" key
-    colembed = ['Sex']  # added manually
-    colembed_dict = {col: 2 + int(np.log(df[col].nunique())) for col in colembed}
-    model_dict['data_pars']['cols_input_type']['colembed_dict'] = colembed_dict
-
-
-
-    model_dict['data_pars']['data_pars'] = {
-        'colcat'        : colcat,
-        'colnum'        : colnum,
-        'coly'          : coly,
-        'colcat_unique' : colcat_unique,
-        'colembed_dict' : colembed_dict,
-    }
-
     return model_dict
 
 
@@ -204,6 +178,8 @@ if __name__ == "__main__":
     import fire
     fire.Fire()
     profiler.stop() ; print(profiler.output_text(unicode=True, color=True))
+
+
 
 
 

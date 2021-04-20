@@ -70,12 +70,22 @@ config_default   = "config1"    ### name of function which contains data configu
 cols_input_type_1 = {
      "coly"   :   "Survived"
     ,"colid"  :   "PassengerId"
-    ,"colcat" :   ["Sex", "Embarked" ]
-    ,"colnum" :   ["Pclass", "Age","SibSp", "Parch","Fare"]
+    ,"colcat" :   ["Sex", "Embarked", "Pclass", ]
+    ,"colnum" :   [ "Age","SibSp", "Parch","Fare"]
     ,"coltext" :  []
     ,"coldate" :  []
-    ,"colcross" : [ "Name", "Sex", "Ticket","Embarked","Pclass", "Age", "SibSp", ]
+    ,"colcross" : [  ]
 }
+
+
+colcat = cols_input_type_1['colcat']
+colnum = cols_input_type_1['colnum']
+coly   = cols_input_type_1['coly']
+
+# colcat_unique = {  col: list(df[col].unique())  for col in colcat }
+colcat_unique = {  'Sex': 2, 'Embarked': 2 }   ### nbf unique values
+
+colcat_bin  = []  ### Compute the bins for category
 
 
 ####################################################################################
@@ -85,7 +95,7 @@ def config1() :
        used for titanic classification task
     """
     data_name    = "titanic"         ### in data/input/
-    model_class  = "model_gefs.py::Model"  ### ACTUAL Class name for model_sklearn.py
+    model_class  = "source/models/model_gefs.py::RandomForest"  ### ACTUAL Class name for model_sklearn.py
     n_sample     = 1000
 
     def post_process_fun(y):   ### After prediction is done
@@ -95,62 +105,69 @@ def config1() :
         return  int(y)
 
 
-    model_dict = {"model_pars": {
-        ### LightGBM API model   #######################################
+    model_dict = {
+    "model_pars": {
          "model_class": model_class
         ,"model_pars" : {'cat': 10, 'n_estimators': 5
                         }
 
         , "post_process_fun" : post_process_fun   ### After prediction  ##########################################
         , "pre_process_pars" : {"y_norm_fun" :  pre_process_fun ,  ### Before training  ##########################
+            ### Pipeline for data processing ##############################
+            "pipe_list": [
+            {"uri": "source/prepro.py::pd_coly",                 "pars": {}, "cols_family": "coly",       "cols_out": "coly",           "type": "coly"         },
 
+            # {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
+            # {"uri": "source/prepro.py::pd_colnum_binto_onehot",  "pars": {}, "cols_family": "colnum_bin", "cols_out": "colnum_onehot",  "type": ""             },
 
-        ### Pipeline for data processing ##############################
-        "pipe_list": [
-        #### coly target prorcessing
-        {"uri": "source/prepro.py::pd_coly",                 "pars": {}, "cols_family": "coly",       "cols_out": "coly",           "type": "coly"         },
+            {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
+            #{"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
 
+            ],
+        }
+      },
 
-        {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
-        {"uri": "source/prepro.py::pd_colnum_binto_onehot",  "pars": {}, "cols_family": "colnum_bin", "cols_out": "colnum_onehot",  "type": ""             },
-
-        #### catcol INTO integer,   colcat into OneHot
-        {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
-        {"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
-
-        ],
-               }
-        },
-
-      "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
+    "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
                         # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
                       },
 
-      "data_pars": { "n_sample" : n_sample,
+    "data_pars": { "n_sample" : n_sample,
           "download_pars" : None,
 
-          ### Raw data:  column input ##############################################################
-          "cols_input_type" : cols_input_type_1,
+        ### Raw data:  column input
+        "cols_input_type" : cols_input_type_1,
+
+          ### Model Input :  Merge family of columns
+          "cols_model_group": [ "colnum",
+                                "colcat_bin",  ]
+
+          #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
+          ,'cols_model_type': {
+             #'continuous'   : [ 'colnum',   ],
+             #'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
+             #'my_split_23'  : [ 'colnum_bin',   ],
+          },
 
 
-          ### Model Input :  Merge family of columns   #############################################
-          #  "colnum", "colnum_bin", "colnum_onehot", "colnum_binmap",  #### Colnum columns
-          #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
-          #  "colcross_single_onehot_select", "colcross_pair_onehot",  "colcross_pair",  #### colcross columns  "coldate", "coltext",
-          "cols_model_group": [ "colnum_bin",
-                                "colcat_bin",
+        'data_pars' :{
+                'cols_model_type': {
+                },
+                # Raw dataset, pre preprocessing
+                "dataset_path" : "",
+                "batch_size":128,   ### Mini Batch from data
+                # Needed by getdataset
+                "clean" : False,
+                "data_path": "",
 
-                              ]
+                'colcat_unique' : colcat_unique,
+                'colcat_bin'    : colcat_bin,
+                'colnum'        : colnum,
+                'coly'          : coly,
+                'colembed_dict' : None
+        }
 
-      #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
-     ,'cols_model_type': {
-         'continuous'   : [ 'colnum',   ],
-         'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
-         'my_split_23'  : [ 'colnum_bin',   ],
-      }   
-
-          ### Filter data rows   ##################################################################
-         ,"filter_pars": { "ymax" : 2 ,"ymin" : -1 }
+        ### Filter data rows   #################################
+        ,"filter_pars": { "ymax" : 2 ,"ymin" : -1 }
 
          }
       }
@@ -163,42 +180,11 @@ def config1() :
 
 
 
-#####################################################################################
-########## Profile data #############################################################
-from core_run import  data_profile
-# def data_profile(path_data="", path_output="", n_sample= 5000):
-"""
-
-def data_profile(path_data="", path_output="", n_sample= 5000):
-   from source.run_feature_profile import run_profile
-   run_profile(path_data   = path_data,
-               path_output = path_output + "/profile/",
-               n_sample    = n_sample,
-              )
-"""
-
-
-
 ###################################################################################
 ########## Preprocess #############################################################
 ### def preprocess(config="", nsample=1000):
 from core_run import preprocess
 
-"""
-def preprocess(config=None, nsample=None):
-    config_name  = config  if config is not None else config_default
-    mdict        = globals()[config_name]()
-    m            = mdict["global_pars"]
-    print(mdict)
-
-    from source import run_preprocess
-    run_preprocess.run_preprocess(config_name   =  config_name,
-                                  config_path   =  m["config_path"],
-                                  n_sample      =  nsample if nsample is not None else m["n_sample"],
-
-                                  ### Optonal
-                                  mode          =  "run_preprocess")
-"""
 
 
 
@@ -206,21 +192,6 @@ def preprocess(config=None, nsample=None):
 ########## Train #################################################################
 # def train(config=None, nsample=None):
 from core_run import train
-"""
-
-
-    config_name  = config  if config is not None else config_default
-    mdict        = globals()[config_name]()
-    m            = mdict["global_pars"]
-    print(mdict)
-    
-    from source import run_train
-    run_train.run_train(config_name       =  config_name,
-                        config_path       =  m["config_path"],
-                        n_sample          =  nsample if nsample is not None else m["n_sample"]
-                        )
-"""
-
 
 
 
@@ -229,33 +200,16 @@ from core_run import train
 # predict(config="", nsample=10000)
 from core_run import predict
 
-"""
-def predict(config=None, nsample=None):
-    config_name  = config  if config is not None else config_default
-    mdict        = globals()[config_name]()
-    m            = mdict["global_pars"]
-
-
-    from source import run_inference
-    run_inference.run_predict(config_name = config_name,
-                              config_path = m["config_path"],
-                              n_sample    = nsample if nsample is not None else m["n_sample"],
-
-                              #### Optional
-                              path_data   = m["path_pred_data"],
-                              path_output = m["path_pred_output"],
-                              model_dict  = None
-                              )
-"""
 
 
 
 ###########################################################################################################
 ###########################################################################################################
 if __name__ == "__main__":
-    d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default }
+    from pyinstrument import Profiler;  profiler = Profiler() ; profiler.start()
     import fire
-    fire.Fire(d)
+    fire.Fire()
+    profiler.stop() ; print(profiler.output_text(unicode=True, color=True))
     
 
 

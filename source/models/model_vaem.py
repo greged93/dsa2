@@ -10,9 +10,8 @@ ipython source/models/keras_widedeep.py  test  --pdb
 import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
 
 ####################################################################################################
-try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
-except Exception as e : verbosity = 2
-#raise Exception(f"{e}")
+from utilmy import global_verbosity, os_makedirs
+verbosity = global_verbosity(__file__, "/../../config.json" ,default= 5)
 
 def log(*s):
     print(*s, flush=True)
@@ -22,10 +21,6 @@ def log2(*s):
 
 def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
-
-def os_makedirs(dir_or_file):
-    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
-    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
 
 ####################################################################################################
 global model, session
@@ -52,7 +47,7 @@ import seaborn as sns; sns.set(style="ticks", color_codes=True)
 ### Need TF 1.4    pip install tensorflow=1.14
 import tensorflow as tf
 print(tf.__version__)
-assert "1."  in str(tf.version.VERSION), 'Compatible only with TF 1.5.1, keras 2.3.1, ' + str(tf.version.VERSION)
+assert "1."  in str(tf.version.VERSION), 'Compatible only with TF 1.4.1 keras 2.3.1, ' + str(tf.version.VERSION)
 
 thisfile_path = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")
 sys.path.append( thisfile_path + "/repo/VAEM/" )

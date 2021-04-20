@@ -4,13 +4,15 @@
 Multi Density Variationnal Autoencoder
 Only with TF1
 
+
+
+
 """
 import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
 
 ####################################################################################################
-try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
-except Exception as e : verbosity = 2
-#raise Exception(f"{e}")
+from utilmy import global_verbosity, os_makedirs
+verbosity = global_verbosity(__file__, "/../../config.json" ,default= 5)
 
 def log(*s):
     print(*s, flush=True)
@@ -20,10 +22,6 @@ def log2(*s):
 
 def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
-
-def os_makedirs(dir_or_file):
-    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
-    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
 
 ####################################################################################################
 global model, session
@@ -722,69 +720,13 @@ def test():
     test_helper(model_pars, data_pars, compute_pars, Xpred)
 
 
-def test_dataset_classi_fake(nrows=500):
-    from sklearn import datasets as sklearn_datasets
-    ndim=11
-    coly   = 'y'
-    colnum = ["colnum_" +str(i) for i in range(0, ndim) ]
-    colcat = ['colcat_1']
-    X, y    = sklearn_datasets.make_classification(
-              n_samples=10000, n_features=ndim, n_classes=1, n_redundant = 0, n_informative=ndim )
-    df = pd.DataFrame(X,  columns= colnum)
-    for ci in colcat :
-      df[ci] = np.random.randint(0,1, len(df))
-    df[coly]   = y.reshape(-1, 1)
-    # log(df)
-    return df, colnum, colcat, coly
-
-
-def test_dataset_petfinder(nrows=1000):
-    from sklearn.preprocessing import LabelEncoder
-    # Dense features
-    colnum = ['PhotoAmt', 'Fee','Age' ]
-
-    # Sparse features
-    colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized',
-              'Health', 'Breed1' ]
-
-    colembed = ['Breed1']
-    # Target column
-    coly        = "y"
-
-    dataset_url = 'http://storage.googleapis.com/download.tensorflow.org/data/petfinder-mini.zip'
-    csv_file    = 'datasets/petfinder-mini/petfinder-mini.csv'
-    tf.keras.utils.get_file('petfinder_mini.zip', dataset_url,extract=True, cache_dir='.')
-
-    log3('Data Frame Loaded')
-    df      = pd.read_csv(csv_file)
-    df      = df.iloc[:nrows, :]
-    df['y'] = np.where(df['AdoptionSpeed']==4, 0, 1)
-    df      = df.drop(columns=['AdoptionSpeed', 'Description'])
-    df      = df.apply(LabelEncoder().fit_transform)
-    log3(df.dtypes)
-    return df, colnum, colcat, coly, colembed
-
-
-def train_test_split2(df, coly):
-    # log3(df.dtypes)
-    y = df[coly] ### If clonassificati
-    X = df.drop(coly,  axis=1)
-    log3('y', np.sum(y[y==1]) , X.head(3))
-    ######### Split the df into train/test subsets
-    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)
-    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021)
-
-    #####
-    # y = y.astype('uint8')
-    num_classes                                = len(set(y_train_full.values.ravel()))
-
-    return X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes
-
-
 
 def test2(n_sample          = 1000):
-    df, colnum, colcat, coly = test_dataset_classi_fake(nrows= n_sample)
-    X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = train_test_split2(df, coly)
+    from adatasets import test_dataset_classification_fake, pd_train_test_split2
+    df, d=     test_dataset_classification_fake(n_sample)
+    colnum, colcat, coly = d['colnum'], d['colcat'], d['coly']
+    # df, colnum, colcat, coly = test_dataset_classi_fake(nrows= n_sample)
+    X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = pd_train_test_split2(df, coly)
 
     #### Matching Big dict  ##################################################
     def post_process_fun(y): return int(y)
@@ -856,8 +798,14 @@ def test2(n_sample          = 1000):
 
 
 def test3(n_sample = 1000):
-    df, colnum, colcat, coly,colyembed = test_dataset_petfinder(nrows= n_sample)
-    X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = train_test_split2(df, coly)
+    from adatasets import test_dataset_classification_petfinder, pd_train_test_split2
+    df, d=     test_dataset_classification_petfinder(n_sample)
+    colnum, colcat, coly = d['colnum'], d['colcat'], d['coly']
+    # df, colnum, colcat, coly = test_dataset_classi_fake(nrows= n_sample)
+    X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = pd_train_test_split2(df, coly)
+
+    #df, colnum, colcat, coly,colyembed = test_dataset_petfinder(nrows= n_sample)
+    #X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = train_test_split2(df, coly)
 
     #### Matching Big dict  ##################################################
     def post_process_fun(y): return int(y)
@@ -985,6 +933,8 @@ def test_helper(model_pars, data_pars, compute_pars):
     log('Model architecture:')
     log(model.model.summary())
 
+
+
 def benchmark(config='', dmin=5, dmax=6):
     from pmlb import fetch_data, classification_dataset_names
     from sdv.evaluation import evaluate
@@ -1053,6 +1003,81 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+"""
+def test_dataset_classi_fake(nrows=500):
+    from sklearn import datasets as sklearn_datasets
+    ndim=11
+    coly   = 'y'
+    colnum = ["colnum_" +str(i) for i in range(0, ndim) ]
+    colcat = ['colcat_1']
+    X, y    = sklearn_datasets.make_classification(
+              n_samples=10000, n_features=ndim, n_classes=1, n_redundant = 0, n_informative=ndim )
+    df = pd.DataFrame(X,  columns= colnum)
+    for ci in colcat :
+      df[ci] = np.random.randint(0,1, len(df))
+    df[coly]   = y.reshape(-1, 1)
+    # log(df)
+    return df, colnum, colcat, coly
+
+
+def test_dataset_petfinder(nrows=1000):
+    from sklearn.preprocessing import LabelEncoder
+    # Dense features
+    colnum = ['PhotoAmt', 'Fee','Age' ]
+
+    # Sparse features
+    colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized',
+              'Health', 'Breed1' ]
+
+    colembed = ['Breed1']
+    # Target column
+    coly        = "y"
+
+    dataset_url = 'http://storage.googleapis.com/download.tensorflow.org/data/petfinder-mini.zip'
+    csv_file    = 'datasets/petfinder-mini/petfinder-mini.csv'
+    tf.keras.utils.get_file('petfinder_mini.zip', dataset_url,extract=True, cache_dir='.')
+
+    log3('Data Frame Loaded')
+    df      = pd.read_csv(csv_file)
+    df      = df.iloc[:nrows, :]
+    df['y'] = np.where(df['AdoptionSpeed']==4, 0, 1)
+    df      = df.drop(columns=['AdoptionSpeed', 'Description'])
+    df      = df.apply(LabelEncoder().fit_transform)
+    log3(df.dtypes)
+    return df, colnum, colcat, coly, colembed
+
+
+def train_test_split2(df, coly):
+    # log3(df.dtypes)
+    y = df[coly] ### If clonassificati
+    X = df.drop(coly,  axis=1)
+    log3('y', np.sum(y[y==1]) , X.head(3))
+    ######### Split the df into train/test subsets
+    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)
+    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021)
+
+    #####
+    # y = y.astype('uint8')
+    num_classes                                = len(set(y_train_full.values.ravel()))
+
+    return X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes
+"""
+
+
+
+
+
 """
 
     I had the same issue here using tf.data.Datasets and, for me, the problem was related with the inputs and outputs.
@@ -1078,3 +1103,74 @@ if __name__ == "__main__":
     model.fit(dataset, epochs=5)
 
 """
+
+
+
+
+
+
+'''from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split
+
+import matplotlib.pyplot as plt
+import seaborn as sb
+
+from pmlb import fetch_data, classification_dataset_names
+
+logit_test_scores = []
+gnb_test_scores = []
+
+for classification_dataset in classification_dataset_names[:5]:
+    X, y = fetch_data(classification_dataset, return_X_y=True)
+    train_X, test_X, train_y, test_y = train_test_split(X, y)
+
+    logit = SVC()
+    gnb = GaussianNB()
+
+    logit.fit(train_X, train_y)
+    gnb.fit(train_X, train_y)
+
+    logit_test_scores.append(logit.score(test_X, test_y))
+    gnb_test_scores.append(gnb.score(test_X, test_y))
+
+print(logit_test_scores,gnb_test_scores)
+sb.boxplot(data=[logit_test_scores, gnb_test_scores], notch=True)
+plt.xticks([0, 1], ['LogisticRegression', 'GaussianNB'])
+plt.ylabel('Test Accuracy')
+plt.show()'''
+
+'''import sdmetrics
+
+# Load the demo data, which includes:
+# - A dict containing the real tables as pandas.DataFrames.
+# - A dict containing the synthetic clones of the real data.
+# - A dict containing metadata about the tables.
+real_data, synthetic_data, metadata = sdmetrics.load_demo()
+
+# Obtain the list of multi table metrics, which is returned as a dict
+# containing the metric names and the corresponding metric classes.
+print(real_data)
+'''
+'''metrics = sdmetrics.multi_table.MultiTableMetric.get_subclasses()
+
+# Run all the compatible metrics and get a report
+print(sdmetrics.compute_metrics(metrics, real_data, synthetic_data, metadata=metadata))'''
+
+def test4():
+    from sdv.demo import load_tabular_demo
+
+    from sdv.tabular import GaussianCopula
+
+    real_data = load_tabular_demo('student_placements')
+
+    model = GaussianCopula()
+
+    model.fit(real_data)
+
+    synthetic_data = model.sample()
+
+    from sdv.evaluation import evaluate
+
+    print(evaluate(synthetic_data, real_data))

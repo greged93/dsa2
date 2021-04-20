@@ -108,7 +108,7 @@ jobs:
     #  run: chmod -R 777 . && ztest/run_models.sh   # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_import/log_optim.py
 
 
-    ########### Keras TF #############################################################################
+    ########### Keras TF 2.4 #############################################################################
     - name: python keras_widedeep.py  test
       continue-on-error: true
       run:  |
@@ -123,10 +123,6 @@ jobs:
             cd source/models && ipython keras_widedeep_dense.py  test
             echo "keras_widedeep_dense.py" >> file_check.txt
 
-
-    - name: python model_vaem.py test
-      continue-on-error: true
-      run:  cd source/models && ipython model_vaem.py test
 
 
     - name: python model_vaemdn.py test
@@ -198,9 +194,9 @@ jobs:
         pip3 install -r requirements.txt
         python setup.py install
 
-    - name: python torch_ease.py test_sparse
+    - name: python torch_ease.py test
       # continue-on-error: true
-      run: cd source/models && ipython torch_ease.py test_sparse
+      run: cd source/models && ipython torch_ease.py test
 
 
     - name: python torch_rectorch.py test
@@ -208,6 +204,20 @@ jobs:
       run: cd source/models && ipython torch_rectorch.py test
 
 
+
+
+
+    ########### Keras TF 1.5 #############################################################################
+    - name: pip3 install tensorflow==1.15  keras==2.3.1
+      run: |
+        python3 -m pip uninstall tensorflow  keras -y
+        python3 -m pip install tensorflow==1.4.1  --upgrade  --force-reinstall
+        python -c "import tensorflow as tf;print(tf) "
+
+
+    - name: python model_vaem.py test
+      continue-on-error: true
+      run:  cd source/models && ipython model_vaem.py test
 
 
 

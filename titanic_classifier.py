@@ -5,7 +5,6 @@
   python titanic_classifier.py  train      --config  config1
   python titanic_classifier.py  predict    --config  config1
 
-python  titanic_classifier.py  data_profile
 python  titanic_classifier.py  preprocess  --nsample 100
 python  titanic_classifier.py  train       --nsample 200
 python  titanic_classifier.py  predict
@@ -14,9 +13,7 @@ python  titanic_classifier.py  predict
 """
 import warnings, copy, os, sys
 warnings.filterwarnings("ignore")
-
 DO_PROFILE = True
-
 
 ####################################################################################
 ###### Path ########################################################################
@@ -337,18 +334,9 @@ except : pass
 ###########################################################################################################
 ###########################################################################################################
 if __name__ == "__main__":
-    if DO_PROFILE :
-        from pyinstrument import Profiler
-        profiler = Profiler()
-        profiler.start()
-
-
-    d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default }
+    from pyinstrument import Profiler;  profiler = Profiler() ; profiler.start()
     import fire
-    fire.Fire(d)
-
-    if DO_PROFILE :
-        profiler.stop()
-        print(profiler.output_text(unicode=True, color=True))
+    fire.Fire()
+    profiler.stop() ; print(profiler.output_text(unicode=True, color=True))
 
 
