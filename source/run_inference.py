@@ -113,6 +113,10 @@ def predict(model_name, path_model, dfX, cols_family, model_dict):
     log2("#### modelx\n", modelx.model)
 
     log("### Prediction  ###################################################")
+    if isinstance(dfX, str):
+        import pandas as pd
+        path = dfX
+        dfX    = pd.read_parquet(path)
     dfX  = dfX.reindex(columns=colsX)   #reindex included
     ypred_tuple = modelx.predict(dfX, data_pars    = model_dict['data_pars'],
                                       compute_pars = model_dict['compute_pars']                           )
@@ -144,7 +148,7 @@ def run_predict(config_name, config_path, n_sample=-1,
     from run_preprocess import preprocess_inference   as preprocess
     colid            = load(f'{path_pipeline}/colid.pkl')
     df               = load_dataset(path_data, path_data_y=None, colid=colid, n_sample=n_sample)
-    dfX, cols        = preprocess(df, path_pipeline, preprocess_pars=pars)
+    dfX, cols        = preprocess(df, path_pipeline, preprocess_pars=pars, global_pars=m)
     coly = cols["coly"]
 
 
