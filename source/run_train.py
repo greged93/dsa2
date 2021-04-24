@@ -32,7 +32,7 @@ log(root)
 
 ####################################################################################################
 from util_feature import   load, save_list, load_function_uri, save
-from run_preprocess import  preprocess, preprocess_load
+from run_preprocess import  preprocess_inference, preprocess_load
 
 def save_features(df, name, path):
     if path is not None :
@@ -216,25 +216,24 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     ###### Pass full Pandas dataframe  ################################################
-    log2(dfX.shape)
-    dfX    = dfX.sample(frac=1.0)
-    itrain = int(0.6 * len(dfX))
-    ival   = int(0.8 * len(dfX))
-    data_pars['train'] = { 'Xtrain' : dfX[colsX].iloc[:itrain, :],
-                           'ytrain' : dfX[coly].iloc[:itrain],
-                           'Xtest'  : dfX[colsX].iloc[itrain:ival, :],
-                           'ytest'  : dfX[coly].iloc[itrain:ival],
+    # log2(dfX.shape)
+    # dfX    = dfX.sample(frac=1.0)
+    # itrain = int(0.6 * len(dfX))
+    # ival   = int(0.8 * len(dfX))
+    # data_pars['train'] = { 'Xtrain' : dfX[colsX].iloc[:itrain, :],
+                           # 'ytrain' : dfX[coly].iloc[:itrain],
+                           # 'Xtest'  : dfX[colsX].iloc[itrain:ival, :],
+                           # 'ytest'  : dfX[coly].iloc[itrain:ival],
 
-                           'Xval'   : dfX[colsX].iloc[ival:, :],
-                           'yval'   : dfX[coly].iloc[ival:],
-                         }
+                           # 'Xval'   : dfX[colsX].iloc[ival:, :],
+                           # 'yval'   : dfX[coly].iloc[ival:],
+                         # }
 
     """
     #### TODO : Lazy Dict to have large dataset
     ##### Lazy Dict mechanism : Only path
     """
     data_pars = data_split(dfX, data_pars, model_path, colsX, coly)
-  
 
 
 
@@ -251,7 +250,14 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     log("#### Predict ################################################################")
-    ypred, ypred_proba = modelx.predict(dfX[colsX], data_pars= data_pars_ref, compute_pars=compute_pars)
+    import pandas as pd
+    if isinstance(dfX, pd.DataFrame):
+        ypred, ypred_proba = modelx.predict(dfX[colsX], data_pars= data_pars, compute_pars=compute_pars)
+    if isinstance(dfX, str):
+        from source.util_feature import load
+        path = dfX
+        dfX    = pd.read_parquet(path)
+        ypred, ypred_proba = modelx.predict(dfX[colsX], data_pars= data_pars, compute_pars=compute_pars)
 
     dfX[coly + '_pred'] = ypred  # y_norm(ypred, inverse=True)
 
@@ -276,6 +282,8 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     log("#### Metrics ################################################################")
+    itrain = int(0.6 * len(dfX))
+    ival   = int(0.8 * len(dfX))
     from util_feature import  metrics_eval
     metrics_test = metrics_eval(metric_list,
                                 ytrue       = dfX[coly].iloc[ival:],
@@ -362,14 +370,17 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     preprocess_pars = model_dict['model_pars']['pre_process_pars']
      
     if mode == "run_preprocess" :
-        dfXy, cols      = preprocess(path_train_X, path_train_y,
+        """dfXy, cols      = preprocess(path_train_X, path_train_y,
                                      path_pipeline,    ### path to save preprocessing pipeline
                                      cols_group,       ### dict of column family
                                      n_sample,
                                      preprocess_pars,
                                      path_features_store  ### Store intermediate dataframe
                                      )
-
+                                     """
+        dfXy, cols         = preprocess_inference(path_train_X, path_train_y,
+                                                  path_pipeline, preprocess_pars=preprocess_pars, cols_group=cols_group, global_pars= m, n_sample=n_sample)
+        
     elif mode == "load_preprocess"  :  #### Load existing data
         dfXy, cols      = preprocess_load(path_train_X, path_train_y, path_pipeline, cols_group, n_sample,
                                           preprocess_pars,  path_features_store=path_features_store)

@@ -86,7 +86,7 @@ def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     global model, session
 
     if Xpred is None:
-        Xpred = get_dataset(data_pars, task_type="predict")
+        Xpred = get_dataset2(data_pars, task_type="predict")
     else :
         if data_pars.get('type', 'pandas') in ['pandas', 'ram']:
             Xpred,_ = get_dataset_split_for_model_pandastuple(Xpred, ytrain=None, data_pars= data_pars, )

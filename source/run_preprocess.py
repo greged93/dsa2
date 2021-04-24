@@ -226,7 +226,8 @@ def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_g
 
 
 
-def preprocess_inference(df, path_pipeline="data/pipeline/pipe_01/", preprocess_pars={}, cols_group=None):
+def preprocess_inference(path_train_X="", path_train_y="", path_pipeline="data/pipeline/pipe_01/", preprocess_pars={}, cols_group=None, global_pars= None, 
+                        n_sample = 5000):
     """
        At Inference time, load model, params and preprocess data.
        Not saving the data, only output final dataframe
@@ -250,16 +251,18 @@ def preprocess_inference(df, path_pipeline="data/pipeline/pipe_01/", preprocess_
     pipe_list    = preprocess_pars.get('pipe_list', pipe_default)
     pipe_list_X  = [ task for task in pipe_list  if task.get('type', '')  not in ['coly', 'filter']  ]
     pipe_filter  = [ task for task in pipe_list  if task.get('type', '')   in ['filter']  ]
-
+    
 
     log("########### Load column by column type ##################################")
-    cols_group      = preprocess_pars['cols_group']
+    cols_group      = preprocess_pars.get('cols_group',cols_group)
     log(cols_group)   ### list of model columns familty
     colid           = cols_group['colid']   # "jobId"
     coly            = cols_group['coly']
     colcat          = cols_group['colcat']  # [ 'companyId', 'jobType', 'degree', 'major', 'industry' ]
     colnum          = cols_group['colnum']  # ['yearsExperience', 'milesFromMetropolis']
-
+    
+    log("##### Load data ######################################################################")
+    df = load_dataset(path_train_X, path_train_y, colid, n_sample= n_sample)
 
     ##### Generate features ########################################################################
     dfi_all          = {} ### Dict of all features
@@ -309,7 +312,7 @@ def preprocess_inference(df, path_pipeline="data/pipeline/pipe_01/", preprocess_
 
 
     log("######  Merge AlL int dfXy  #############################################################")
-    dfXy = df[  colnum + colcat ]
+    dfXy = df[ [coly] + colnum + colcat ]
     for t in dfi_all.keys():
         if t not in [  'colnum', 'colcat'] :
            dfXy = pd.concat((dfXy, dfi_all[t] ), axis=1)
@@ -320,7 +323,11 @@ def preprocess_inference(df, path_pipeline="data/pipeline/pipe_01/", preprocess_
         cols_family_full['colid']=colid
     cols_family_full['colX'] = colXy
 
-    return dfXy, cols_family_full
+    ## return dfXy, cols_family_full
+    path_dfXy = global_pars["path_data_preprocess"] + "/dfXy/"
+    os.makedirs(path_dfXy, exist_ok= True)
+    dfXy.to_parquet( path_dfXy + f"/features_0.parquet" ) ### i=0...10
+    return path_dfXy, cols_family_full
 
 
 def preprocess_load(path_train_X="", path_train_y="", path_pipeline_export="", cols_group=None, n_sample=5000,
