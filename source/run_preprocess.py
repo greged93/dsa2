@@ -84,7 +84,7 @@ def model_dict_load(model_dict, config_path, config_name, verbose=True):
 ####################################################################################################
 ####################################################################################################
 def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_group=None, n_sample=5000,
-               preprocess_pars={}, path_features_store=None):
+               preprocess_pars={}, path_features_store=None, model_dict={}):
     """
       Used for trainiing only
       Save params on disk
@@ -226,7 +226,7 @@ def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_g
 
 
 
-def preprocess_inference(df, path_pipeline="data/pipeline/pipe_01/", preprocess_pars={}, global_pars= {}):
+def preprocess_inference(df, path_pipeline="data/pipeline/pipe_01/", preprocess_pars={}, model_dict= {}):
     """
        At Inference time, load model, params and preprocess data.
        Not saving the data, only output final dataframe
@@ -320,6 +320,7 @@ def preprocess_inference(df, path_pipeline="data/pipeline/pipe_01/", preprocess_
     cols_family_full['colX'] = colXy
 
     ## return dfXy, cols_family_full
+    global_pars = model_dict['global_pars']
     path_dfXy = global_pars["path_data_preprocess"] + "/dfXy/"
     os.makedirs(path_dfXy, exist_ok= True)
     dfXy.to_parquet( path_dfXy + f"/features_0.parquet" ) ### i=0...10
@@ -396,7 +397,7 @@ def run_preprocess(config_name, config_path, n_sample=5000,
 
     if mode == "run_preprocess" :
         dfXy, cols      = preprocess(path_train_X, path_train_y, path_pipeline, cols_group, n_sample,
-                                 preprocess_pars,  path_features_store)
+                                 preprocess_pars,  path_features_store, model_dict=model_dict)
 
     elif mode == "load_preprocess" :
         dfXy, cols      = preprocess_load(path_train_X, path_train_y, path_pipeline, cols_group, n_sample,

@@ -212,11 +212,11 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
     log("#### Model Input : Actual data split ########################################")
     #### date_type :  'ram', 'pandas', tf_data,  torch_data,
-    data_pars['data_type'] = data_pars.get('data_type', 'torch_data')
+    data_pars['data_type'] = data_pars.get('data_type', 'disk_data')
 
 
     ###### Pass full Pandas dataframe  ################################################
-    log2(dfX.shape)
+    """log2(dfX.shape)
     dfX    = dfX.sample(frac=1.0)
     itrain = int(0.6 * len(dfX))
     ival   = int(0.8 * len(dfX))
@@ -229,12 +229,13 @@ def train(model_dict, dfX, cols_family, post_process_fun):
                            'yval'   : dfX[coly].iloc[ival:],
                          }
 
-    """
+    
     #### TODO : Lazy Dict to have large dataset
     ##### Lazy Dict mechanism : Only path
     """
     data_pars = data_split(dfX, data_pars, model_path, colsX, coly)
-
+    itrain = int(0.6 * len(dfX))
+    ival   = int(0.8 * len(dfX))
 
 
     log("#### Init, Train #############################################################")
@@ -250,7 +251,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     log("#### Predict ################################################################")
-    ypred, ypred_proba = modelx.predict(dfX[colsX], data_pars= data_pars, compute_pars=compute_pars)
+    ypred, ypred_proba = modelx.predict(dfX[colsX], data_pars= data_pars_ref, compute_pars=compute_pars)
 
     dfX[coly + '_pred'] = ypred  # y_norm(ypred, inverse=True)
 
@@ -366,8 +367,8 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
                                      cols_group,       ### dict of column family
                                      n_sample,
                                      preprocess_pars,
-                                     path_features_store  ### Store intermediate dataframe
-                                     )
+                                     path_features_store,  ### Store intermediate dataframe
+                                     model_dict)
         
     elif mode == "load_preprocess"  :  #### Load existing data
         dfXy, cols      = preprocess_load(path_train_X, path_train_y, path_pipeline, cols_group, n_sample,
