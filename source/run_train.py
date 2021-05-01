@@ -234,8 +234,6 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     ##### Lazy Dict mechanism : Only path
     """
     data_pars = data_split(dfX, data_pars, model_path, colsX, coly)
-    itrain = int(0.6 * len(dfX))
-    ival   = int(0.8 * len(dfX))
 
 
     log("#### Init, Train #############################################################")
@@ -251,14 +249,17 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     log("#### Predict ################################################################")
-    ypred, ypred_proba = modelx.predict(dfX[colsX], data_pars= data_pars_ref, compute_pars=compute_pars)
+    ypred, ypred_proba = modelx.predict((dfX,colsX), data_pars= data_pars_ref, compute_pars=compute_pars)
 
     dfX[coly + '_pred'] = ypred  # y_norm(ypred, inverse=True)
 
     dfX[coly]            = dfX[coly].apply(lambda  x : post_process_fun(x) )
     dfX[coly + '_pred']  = dfX[coly + '_pred'].apply(lambda  x : post_process_fun(x) )
     log2("Prediction    : ",  dfX[[ coly, coly + '_pred' ]] )
-    
+
+    itrain = int(0.6 * len(dfX))
+    ival = int(0.8 * len(dfX))
+
     if ypred_proba is None :  ### No proba
         ypred_proba_val = None
 
