@@ -113,7 +113,7 @@ def predict(model_name, path_model, dfX, cols_family, model_dict):
     log2("#### modelx\n", modelx.model)
 
     log("### Prediction  ###################################################")
-    dfX    =  load_data(dfX)
+    dfX    =  data_load_memory(dfX)
     dfX  = dfX.reindex(columns=colsX)   #reindex included
     ypred_tuple = modelx.predict(dfX, data_pars    = model_dict['data_pars'],
                                       compute_pars = model_dict['compute_pars'])
@@ -121,7 +121,7 @@ def predict(model_name, path_model, dfX, cols_family, model_dict):
     return ypred_tuple
 
     
-def load_data(dfX):
+def data_load_memory(dfX):
     """
     Arguments:
         dfX str or type -- [description]
@@ -132,9 +132,7 @@ def load_data(dfX):
         import glob
         from utilmy import pd_read_file
         path = dfX
-        file_list = glob.glob(dfX + "*.parquet")
-        for file in file_list:
-            dfX    = pd_read_file(file)  
+        dfX = pd_read_file( dfX + "/*.parquet" )
         return dfX
     return dfX
         
