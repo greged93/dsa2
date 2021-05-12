@@ -81,14 +81,32 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     else:
         model.model.fit(Xtrain, ytrain, **compute_pars.get("compute_pars", {}))
 
+def data_load_memory(dfX=None, cols=None):
+    """
+    Arguments:
+        dfX str or type -- [description]
+    return:
+        dfX: df or type
+    """
+    if isinstance(dfX, str):
+        import glob
+        from utilmy import pd_read_file
+        path = dfX
+        file_list = glob.glob(dfX + "*.parquet")
+        for file in file_list:
+            dfX    = pd_read_file(file)
+        return (dfX[cols] if cols is not None else dfX)
+    return (dfX[cols] if cols is not None else dfX)
 
 def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     global model, session
 
     if Xpred is None:
-        Xpred = get_dataset(data_pars, task_type="predict")
+        Xpred = get_dataset2(data_pars, task_type="predict")
     else :
-        if data_pars.get('type', 'pandas') in ['pandas', 'ram']:
+        if isinstance(Xpred, tuple):
+            Xpred = data_load_memory(Xpred[0], cols=Xpred[1])
+        if data_pars.get('type', 'pandas') in ['pandas', 'ram'] and isinstance(Xpred, pd.DataFrame):
             Xpred,_ = get_dataset_split_for_model_pandastuple(Xpred, ytrain=None, data_pars= data_pars, )
         else :
             raise Exception("not implemented")
