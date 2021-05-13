@@ -81,22 +81,47 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     else:
         model.model.fit(Xtrain, ytrain, **compute_pars.get("compute_pars", {}))
 
-def data_load_memory(dfX=None, cols=None):
+def data_load_memory(dfX=None):
     """
-    Arguments:
-        dfX str or type -- [description]
-    return:
-        dfX: df or type
+        dfX str, pd.DataFrame,   Spark DataFrame
     """
+    if isinstance(dfX, pd.DataFrame):
+       return dfX
+
+    if isinstance(dfX, tuple):
+       if isintance(dfX[1], list)
+            cols = dfX[1]
+            if isinstance(dfX[0], pd.DataFrame) :
+                return dfX[0][cols]
+
+            if isinstance(dfX[0], str) :
+                path = dfX[0]
+                dfX = pd_read_file( path + "/*.parquet" )
+                dfX = dfX[cols]
+                return dfX
+
+       if isintance(dfX[1], dict)
+            dd   = dfX[1]
+            cols = dd.get('cols', None)
+
+            if isinstance(dfX[0], pd.DataFrame) :
+                return dfX[0][cols]
+
+            if isinstance(dfX[0], str) :
+                path = dfX[0]
+                dfX  = pd_read_file( path + "/*.parquet" )
+                dfX  = dfX[cols]
+                return dfX
+
+
     if isinstance(dfX, str):
-        import glob
-        from utilmy import pd_read_file
         path = dfX
-        file_list = glob.glob(dfX + "*.parquet")
-        for file in file_list:
-            dfX    = pd_read_file(file)
-        return (dfX[cols] if cols is not None else dfX)
-    return (dfX[cols] if cols is not None else dfX)
+        path = dfX[0]
+        dfX  = pd_read_file( path + "/*.parquet" )        
+        return dfX
+
+
+
 
 def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     global model, session
@@ -104,8 +129,8 @@ def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     if Xpred is None:
         Xpred = get_dataset2(data_pars, task_type="predict")
     else :
-        if isinstance(Xpred, tuple):
-            Xpred = data_load_memory(Xpred[0], cols=Xpred[1])
+        Xpred = data_load_memory(Xpred)  #### Iterator
+         
         if data_pars.get('type', 'pandas') in ['pandas', 'ram'] and isinstance(Xpred, pd.DataFrame):
             Xpred,_ = get_dataset_split_for_model_pandastuple(Xpred, ytrain=None, data_pars= data_pars, )
         else :
