@@ -14,7 +14,9 @@ from utilmy import pd_read_file
 
 def data_load_memory(dfX=None, cols=None):
     """
-        dfX str, pd.DataFrame, 
+        dfX str, pd.DataFrame,   Spark DataFrame
+
+        
 
     """
     if isinstance(dfX, pd.DataFrame):
