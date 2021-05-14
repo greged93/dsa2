@@ -12,6 +12,14 @@ import os, sys,copy, glob, pathlib, pprint, json, pandas as pd, numpy as np, sci
 from utilmy import pd_read_file
 
 
+def log(*s):
+    print(*s)
+
+
+def log2(*s):
+    print(*s)
+
+
 
 def data_load_memory(dfX=None, nsample=-1):
     """
@@ -22,29 +30,29 @@ def data_load_memory(dfX=None, nsample=-1):
        return dfX
 
     if isinstance(dfX, tuple):
-       if isintance(dfX[1], list)
+       if isinstance(dfX[1], list):
             cols = dfX[1]
             if isinstance(dfX[0], pd.DataFrame) :
-            	return dfX[0][cols]
+                return dfX[0][cols]
 
             if isinstance(dfX[0], str) :
-            	path = dfX[0]
-            	dfX = pd_read_file( path + "/*.parquet" , nrows= nsample)
+                path = dfX[0]
+                dfX = pd_read_file( path + "/*.parquet" , nrows= nsample)
                 dfX = dfX[cols]
-            	return dfX
+                return dfX
 
-       if isintance(dfX[1], dict)
+       if isinstance(dfX[1], dict):
             dd   = dfX[1]
             cols = dd.get('cols', None)
 
             if isinstance(dfX[0], pd.DataFrame) :
-            	return dfX[0][cols]
+                return dfX[0][cols]
 
             if isinstance(dfX[0], str) :
-            	path = dfX[0]
-            	dfX  = pd_read_file( path + "/*.parquet" , nrows= nsample)
+                path = dfX[0]
+                dfX  = pd_read_file( path + "/*.parquet" , nrows= nsample)
                 dfX  = dfX[cols]
-            	return dfX
+                return dfX
 
 
     if isinstance(dfX, str):
@@ -76,30 +84,30 @@ def data_load_memory_iterator(dfX=None, nsample=-1):
            yield dfX
 
     if isinstance(dfX, tuple):
-       if isintance(dfX[1], list)
+       if isinstance(dfX[1], list):
             cols = dfX[1]
             if isinstance(dfX[0], pd.DataFrame) :
-            	return dfX[0][cols]
+                return dfX[0][cols]
 
             if isinstance(dfX[0], str) :
-            	path = dfX[0]
-            	dfX = pd_read_file( path + "/*.parquet" , nrows= nsample)
+                path = dfX[0]
+                dfX = pd_read_file( path + "/*.parquet" , nrows= nsample)
                 dfX = dfX[cols]
-            	return dfX
+                return dfX
 
-       if isintance(dfX[1], dict)
+       if isinstance(dfX[1], dict):
             dd   = dfX[1]
             cols = dd.get('cols', None)
 
             if isinstance(dfX[0], pd.DataFrame) :
-            	return dfX[0][cols]
+                return dfX[0][cols]
 
             if isinstance(dfX[0], str) :
-            	path = dfX[0]
-            	flist 
-            	dfX  = pd_read_file( path + "/*.parquet" , nrows= nsample)
+                path = dfX[0]
+                flist
+                dfX  = pd_read_file( path + "/*.parquet" , nrows= nsample)
                 dfX  = dfX[cols]
-            	return dfX
+                return dfX
 
 
 
@@ -111,7 +119,7 @@ def data_save(dfX=None, path=None, fname='file'):
     flist = glob.glob(path + "/*.parquet")
     imax  = len(flist) + 1  ### Add file
     os.makedirs(path, exist_ok=True)
-    dfX[cols].to_parquet( path + f"/{fname}_{imax}.parquet" )
+    dfX.to_parquet( path + f"/{fname}_{imax}.parquet" )
 
 
 

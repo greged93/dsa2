@@ -30,7 +30,7 @@ def reset():
     model, session = None, None
 
 
-########Custom Model #########################################################################################
+########Custom Model ###############################################################################
 from sklearn.linear_model import *
 from sklearn.svm import *
 from sklearn.ensemble import *
