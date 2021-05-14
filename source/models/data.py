@@ -81,33 +81,8 @@ def data_load_memory_iterator(dfX=None, nsample=-1):
         flist = glob.glob( path + "/*.parquet" )
         for fi in flist :
            dfXi  = pd_read_file(fi , nrows= nsample )        
-           yield dfX
+           yield dfXi
 
-    if isinstance(dfX, tuple):
-       if isinstance(dfX[1], list):
-            cols = dfX[1]
-            if isinstance(dfX[0], pd.DataFrame) :
-                return dfX[0][cols]
-
-            if isinstance(dfX[0], str) :
-                path = dfX[0]
-                dfX = pd_read_file( path + "/*.parquet" , nrows= nsample)
-                dfX = dfX[cols]
-                return dfX
-
-       if isinstance(dfX[1], dict):
-            dd   = dfX[1]
-            cols = dd.get('cols', None)
-
-            if isinstance(dfX[0], pd.DataFrame) :
-                return dfX[0][cols]
-
-            if isinstance(dfX[0], str) :
-                path = dfX[0]
-                flist
-                dfX  = pd_read_file( path + "/*.parquet" , nrows= nsample)
-                dfX  = dfX[cols]
-                return dfX
 
 
 
