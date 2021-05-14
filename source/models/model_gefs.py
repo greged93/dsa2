@@ -89,7 +89,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
             # categ cols
             colcat=data_pars["data_pars"]["colcat"],
             # target col index
-            coly=-1,
+            classcol=-1,
             # num cols indices
             continuous_ids=[df.columns.get_loc(c) for c in cont_cols]
         )
@@ -225,6 +225,33 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
 ####################################################################################################
 ############ Test ##################################################################################
+def pd_colcat_get_catcount(df, colcat, classcol, continuous_ids):
+    """  Learns the number of categories in each variable and standardizes the df.
+        ncat: numpy m The number of categories of each variable. One if the variable is continuous.
+    """
+
+    if continuous_ids is None:
+        continuous_ids = []
+
+    # get target col name from col idx
+    classcol = df.columns[classcol]
+
+    df   = df.copy()
+    ncat = {col: 1 for  col in df.columns }
+
+    # get num of target classes
+    df[classcol]   = df[classcol].astype(int)
+    ncat[classcol] = df[classcol].nunique()[0]
+
+    # get num of categ for each of the colcat
+    for i, col in enumerate(colcat) :
+        df[col]   = df[col].astype(int)
+        ncat[col] = df[col].nunique()
+
+    return ncat
+
+
+
 def test(n_sample = 100):
     from adatasets import test_dataset_classification_fake
     df, d = test_dataset_classification_fake(nrows=500)
@@ -236,6 +263,7 @@ def test(n_sample = 100):
 
     X = df[colcat + colnum + [coly]]
     y = df[ [coly]]
+
     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, )#stratify=y) Regression no classes to stratify to
     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021,)# stratify=y_train_full)
     log("X_train", X_train)
@@ -247,8 +275,9 @@ def test(n_sample = 100):
     def pre_process_fun(y):    ### Before the prediction is done
         return  int(y)
 
+    ### Unique values
+    colcat_unique = {  col: list(df[col].unique())  for col in colcat }
 
-    ####################################################
     m = {
     'model_pars': {
         'model_class' :  "model_gefs.py::RandomForest"
@@ -367,27 +396,6 @@ def test_helper(model_pars, data_pars, compute_pars):
 
 
 
-
-
-####################################################################################################
-def pd_colcat_get_catcount(df, colcat, coly, continuous_ids=None):
-    """  Learns the number of categories in each variable and standardizes the df.
-        ncat: numpy m The number of categories of each variable. One if the variable is continuous.
-    """
-    data = data.copy()
-    ncat = np.ones(data.shape[1])
-    if not classcol:
-        classcol = data.shape[1]-1
-    for i in range(data.shape[1]):
-        if i != classcol and (i in continuous_ids or gef_is_continuous(data[:, i])):
-            continue
-        else:
-            data[:, i] = data[:, i].astype(int)
-            ncat[i] = max(data[:, i]) + 1
-    return ncat
-
-
-
 def is_continuous(v_array):
     """ Returns true if df was sampled from a continuous variables, and false
     """
@@ -402,173 +410,80 @@ def is_continuous(v_array):
 
 
 def test2():
+    # Auxiliary functions
+    def get_stats(data, ncat=None):
+        """     Compute univariate statistics for continuous variables. Parameters
+        """
+        data = data.copy()
+        maxv = np.ones(data.shape[1])
+        minv = np.zeros(data.shape[1])
+        mean = np.zeros(data.shape[1])
+        std  = np.zeros(data.shape[1])
+        if ncat is not None:
+            for i in range(data.shape[1]):
+                if ncat[i] == 1:
+                    maxv[i] = np.max(data[:, i])
+                    minv[i] = np.min(data[:, i])
+                    mean[i] = np.mean(data[:, i])
+                    std[i] = np.std(data[:, i])
+                    assert maxv[i] != minv[i], 'Cannot have constant continuous variable in the data'
+                    data[:, i] = (data[:, i] - minv[i]) / (maxv[i] - minv[i])
+        else:
+            for i in range(data.shape[1]):
+                if is_continuous(data[:, i]):
+                    maxv[i] = np.max(data[:, i])
+                    minv[i] = np.min(data[:, i])
+                    mean[i] = np.mean(data[:, i])
+                    std[i]  = np.std(data[:, i])
+                    assert maxv[i] != minv[i], 'Cannot have constant continuous variable in the data'
+                    data[:, i] = (data[:, i] - minv[i]) / (maxv[i] - minv[i])
+        return data, maxv, minv, mean, std
+
+
+    def standardize_data(data, mean, std):
+        """ Standardizes the data given the mean and standard deviations values of
+            each variable.
+        """
+        data = data.copy()
+        for v in range(data.shape[1]):
+            if std[v] > 0:
+                data[:, v] = (data[:, v] - mean[v]) / (std[v])
+                #  Clip values more than 6 standard deviations from the mean
+                data[:, v] = np.clip(data[:, v], -6, 6)
+        return data
+
+
+    def train_test(data, ncat, train_ratio=0.7, prep='std'):
+        shuffle    = np.random.choice(range(data.shape[0]), data.shape[0], replace=False)
+        data_train = data[shuffle[:int(train_ratio * data.shape[0])], :]
+        data_test  = data[shuffle[int(train_ratio * data.shape[0]):], :]
+
+        if prep == 'std':
+            _, maxv, minv, mean, std = get_stats(data_train, ncat)
+            data_train               = standardize_data(data_train, mean, std)
+            X_train, y_train         = data_train[:, :-1], data_train[:, -1]
+            return X_train, y_train, data_train, data_test, mean, std
+
+
     # Load toy dataset
-    df   = pd.read_csv('https://raw.githubusercontent.com/arita37/GeFs/master/data/winequality_white.csv', sep=',')
-    print(df.head(3).T, df.dtypes, df.shape)
+    df_white   = pd.read_csv('https://raw.githubusercontent.com/arita37/GeFs/master/data/winequality_white.csv', sep=';').values
+    ncat_white = pd_colcat_get_catcount(df_white, )#classcol=-1)
+    ncat_white[-1] = 2
 
-    df = df.iloc[:500,:]
-    colcat = "fixed acidity,volatile acidity,citric acid,residual sugar,chlorides,free sulfur dioxide,total sulfur dioxide,density,pH,sulphates,alcohol".split(",")
-    coly   = "quality"
-    print(colcat, coly)
-
-    cols = list(df.columns)
-    icoly = cols.index(coly)
-
-    ncat_white = learncats(df.values, classcol= icoly,   continuous_ids=[])
-    ncat_white[-1] = 2   ### coly Force to be binary
-    ncat_white = [  int(t) for t in ncat_white]
-    print('ncat_white', ncat_white)
-
-
-    X_train, y_train, data_train, data_test, mean, std = train_test_split2(df.values, ncat_white, 0.7)
-    y_train = np.where(y_train <= 6, 0, 1)
-
+    X_train_white, y_train_white, data_train_white, data_test_white, mean_white, std_white = train_test(df_white,
+                                                                                                        ncat_white, 0.7)
+    y_train_white = np.where(y_train_white <= 6, 0, 1)
 
     model_pars = {
-        'n_estimators':10,
+        'n_estimators':100,
         'ncat': ncat_white
     }
-
     model_white = Model(model_pars=model_pars)
-    model_white.model.fit(X_train, y_train)
+
+    model_white.model.fit(X_train_white, y_train_white)
     gef_white = model_white.model.topc(learnspn=np.Inf)
 
     log('gefs model test ok')
-
-
-
-
-import numpy as np
-import pandas as pd
-
-
-# Auxiliary functions
-def get_dummies(data):
-    data = data.copy()
-    if isinstance(data, pd.Series):
-        data = pd.factorize(data)[0]
-        return data
-    for col in data.columns:
-        data.loc[:, col] = pd.factorize(data[col])[0]
-    return data
-
-
-def learncats(data, classcol=None, continuous_ids=[]):
-    """
-        Learns the number of categories in each variable and standardizes the data.
-        ----------
-        data: numpy n x m
-            Numpy array comprising n realisations (instances) of m variables.
-        classcol: int  The column index of the class variables (if any).
-        continuous_ids: list of ints
-            List containing the indices of known continuous variables. Useful for
-            discrete data like age, which is better modeled as continuous.
-        Returns
-        -------
-        ncat: numpy m  The number of categories of each variable. One if the variable is  continuous.
-    """
-    data = data.copy()
-    ncat = np.ones(data.shape[1])
-    if not classcol:
-        classcol = data.shape[1]-1
-    for i in range(data.shape[1]):
-        if i != classcol and (i in continuous_ids or gef_is_continuous(data[:, i])):
-            continue
-        else:
-            data[:, i] = data[:, i].astype(int)
-            ncat[i] = max(data[:, i]) + 1
-    return ncat
-
-def gef_is_continuous(data):
-    """
-        Returns true if data was sampled from a continuous variables, and false
-    """
-    observed = data[~np.isnan(data)]  # not consider missing values for this.
-    rules = [np.min(observed) < 0,
-             np.sum((observed) != np.round(observed)) > 0,
-             len(np.unique(observed)) > min(30, len(observed)/3)]
-    if any(rules):
-        return True
-    else:
-        return False
-
-
-
-def gef_get_stats(data, ncat=None):
-    """
-        Compute univariate statistics for continuous variables.
-    """
-    data = data.copy()
-    maxv = np.ones(data.shape[1])
-    minv = np.zeros(data.shape[1])
-    mean = np.zeros(data.shape[1])
-    std = np.zeros(data.shape[1])
-    if ncat is not None:
-        for i in range(data.shape[1]):
-            if ncat[i] == 1:
-                maxv[i] = np.max(data[:, i])
-                minv[i] = np.min(data[:, i])
-                mean[i] = np.mean(data[:, i])
-                std[i] = np.std(data[:, i])
-                assert maxv[i] != minv[i], 'Cannot have constant continuous variable in the data'
-                data[:, i] = (data[:, i] - minv[i])/(maxv[i] - minv[i])
-    else:
-        for i in range(data.shape[1]):
-            if gef_is_continuous(data[:, i]):
-                maxv[i] = np.max(data[:, i])
-                minv[i] = np.min(data[:, i])
-                mean[i] = np.mean(data[:, i])
-                std[i] = np.std(data[:, i])
-                assert maxv[i] != minv[i], 'Cannot have constant continuous variable in the data'
-                data[:, i] = (data[:, i] - minv[i])/(maxv[i] - minv[i])
-    return data, maxv, minv, mean, std
-
-
-def gef_normalize_data(data, maxv, minv):
-    """
-        Normalizes the data given the maximum and minimum values of each variable.
-    """
-    data = data.copy()
-    for v in range(data.shape[1]):
-        if maxv[v] != minv[v]:
-            data[:, v] = (data[:, v] - minv[v])/(maxv[v] - minv[v])
-    return data
-
-
-def gef_standardize_data(data, mean, std):
-    """
-        Standardizes the data given the mean and standard deviations values of
-    """
-    data = data.copy()
-    for v in range(data.shape[1]):
-        if std[v] > 0:
-            data[:, v] = (data[:, v] - mean[v])/(std[v])
-            #  Clip values more than 6 standard deviations from the mean
-            data[:, v] = np.clip(data[:, v], -6, 6)
-    return data
-
-
-
-
-
-def train_test_split2(data, ncat, train_ratio=0.7, prep='std'):
-    assert train_ratio >= 0
-    assert train_ratio <= 1
-    shuffle = np.random.choice(range(data.shape[0]), data.shape[0], replace=False)
-    data_train = data[shuffle[:int(train_ratio*data.shape[0])], :]
-    data_test = data[shuffle[int(train_ratio*data.shape[0]):], :]
-    if prep=='norm':
-        data_train, maxv, minv, _, _, = gef_get_stats(data_train, ncat)
-        data_test = gef_normalize_data(data_test, maxv, minv)
-    elif prep=='std':
-        _, maxv, minv, mean, std = gef_get_stats(data_train, ncat)
-        data_train = gef_standardize_data(data_train, mean, std)
-        data_test = gef_standardize_data(data_test, mean, std)
-
-    X_train, y_train = data_train[:, :-1], data_train[:, -1]
-    X_test, y_test = data_test[:, :-1], data_test[:, -1]
-
-    return X_train, X_test, y_train, y_test, data_train, data_test
 
 
 
@@ -576,295 +491,6 @@ if __name__ == "__main__":
     import fire
     fire.Fire()
     # test()
-
-
-
-
-
-
-
-
-def test_converion():
-    """
-    General comments on the API¶
-    There are four different functions to do classification with GeFs.
-
-    classify
-    classify_avg
-    classify_lspn
-    classify_avg_lspn
-    The first two, classify and classify_avg, exploit class factorised leaves to run inference faster
-    (propagate the probabilities of all classes at once). That, of course, only works if the leaves
-    are class factorised (e.g. learnsp=np.Inf). Otherwise, one should use classify_lspn and classify_avg_lspn which work
-     with any PC (in particular those with a LearnSPN network at the leaves, hence the name).
-
-    The other important distinction is that avg methods assume a model learned as an ensemble and performs inference by 'averaging' the distribution of each of the base models. These are the methods that match the original Random Forest in terms of classification (with complete data, and class factorised leaves). In contrast, the other methods run inference as if the model is a single PC. One can interpret that as giving different weights to each of the base models according to the likelihood of the instance to be classified (base models under which the instance is more likely are given higher weights).
-    This inference method is referred to as GeF+ in the paper, as it defines a mixture over the base models.
-
-
-    :return:
-    """
-    ### RF ---> GeFs model
-    from sklearn.ensemble import RandomForestClassifier
-    from gefs.sklearn_utils import tree2pc, rf2pc
-
-
-    # Define a synthetic dataset
-    n_samples = 100
-    n_features = 20
-    n_classes = 2
-
-    X, y = make_classification(n_samples=n_samples, n_features=n_features, n_informative=2, n_redundant=2, n_repeated=0,
-                               n_classes=n_classes, n_clusters_per_class=2, weights=None, flip_y=0.01, class_sep=1.0,
-                               hypercube=True, shift=0.0, scale=1.0, shuffle=True, random_state=None)
-    # We need to specify the number of categories of each feature (with 1 for continuous features).
-    ncat = np.ones(n_features+1)  # Here all features are continuous
-    ncat[-1] = n_classes  # The class variable is naturally categorical
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
-
-    rf = RandomForestClassifier(n_estimators=100).fit(X_train, y_train)
-    GeF = rf2pc(rf, X_train, y_train, ncat, learnspn=np.Inf, minstd=1., smoothing=1e-6)
-    pred, prob = GeF.classify_avg(X_test, return_prob=True)
-
-
-
-
-
-
-
-def train_test_split(data, ncat, train_ratio=0.7, prep='std'):
-    assert train_ratio >= 0
-    assert train_ratio <= 1
-    shuffle = np.random.choice(range(data.shape[0]), data.shape[0], replace=False)
-    data_train = data[shuffle[:int(train_ratio*data.shape[0])], :]
-    data_test = data[shuffle[int(train_ratio*data.shape[0]):], :]
-    if prep=='norm':
-        data_train, maxv, minv, _, _, = gef_get_stats(data_train, ncat)
-        data_test = gef_normalize_data(data_test, maxv, minv)
-    elif prep=='std':
-        _, maxv, minv, mean, std = gef_get_stats(data_train, ncat)
-        data_train = gef_standardize_data(data_train, mean, std)
-        data_test = gef_standardize_data(data_test, mean, std)
-
-    X_train, y_train = data_train[:, :-1], data_train[:, -1]
-    X_test, y_test = data_test[:, :-1], data_test[:, -1]
-
-    return X_train, X_test, y_train, y_test, data_train, data_test
-
-
-# Preprocessing functions
-def adult(data):
-    cat_cols = ['workclass', 'education', 'education-num', 'marital-status', 'occupation',
-               'relationship', 'race', 'sex', 'native-country', 'y']
-    cont_cols = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'capital-gain',
-                'capital-loss', 'hours-per-week']
-    data.loc[:, cat_cols] = get_dummies(data[cat_cols])
-    ncat = learncats(data.values, classcol=-1, continuous_ids=[data.columns.get_loc(c) for c in cont_cols])
-    return data.values.astype(float), ncat
-
-
-def australia(data):
-    cat_cols = ['A1', 'A4', 'A5', 'A6', 'A7', 'A9', 'A10', 'A12', 'A13', 'class']
-    cont_cols = ['A2', 'A3', 'A8', 'A11', 'A14', 'A15']
-    data.loc[:, cat_cols] = get_dummies(data[cat_cols])
-    data = data.replace('?', np.nan)
-    ncat = learncats(data.values.astype(float), classcol=-1, continuous_ids=[data.columns.get_loc(c) for c in cont_cols])
-    return data.values.astype(float), ncat
-
-
-def bank(data):
-    cat_cols = ['job', 'marital', 'education', 'default', 'housing', 'loan',
-       'contact', 'month', 'day_of_week', 'poutcome', 'y']
-    cont_cols = ['age', 'duration', 'campaign', 'previous', 'emp.var.rate',
-                'cons.price.idx','cons.conf.idx', 'euribor3m', 'nr.employed']
-    data.loc[:, cat_cols] = get_dummies(data[cat_cols])
-    data.loc[:, 'pdays'] = np.where(data['pdays']==999, 0, 1)
-    ncat = learncats(data.values, classcol=-1, continuous_ids=[data.columns.get_loc(c) for c in cont_cols])
-    return data.values.astype(float), ncat
-
-
-def credit(data):
-    cat_cols = ['SEX', 'EDUCATION', 'MARRIAGE', 'default payment next month']
-    cont_cols = ['LIMIT_BAL', 'AGE', 'PAY_0', 'PAY_2',
-       'PAY_3', 'PAY_4', 'PAY_5', 'PAY_6', 'BILL_AMT1', 'BILL_AMT2',
-       'BILL_AMT3', 'BILL_AMT4', 'BILL_AMT5', 'BILL_AMT6', 'PAY_AMT1',
-       'PAY_AMT2', 'PAY_AMT3', 'PAY_AMT4', 'PAY_AMT5', 'PAY_AMT6']
-    data.loc[:, cat_cols] = get_dummies(data[cat_cols])
-    ncat = learncats(data.values, classcol=-1, continuous_ids=[data.columns.get_loc(c) for c in cont_cols])
-    return data.values.astype(float), ncat
-
-
-def electricity(data):
-    cat_cols = ['day', 'class']
-    cont_cols = ['date', 'period', 'nswprice', 'nswdemand', 'vicprice',
-       'vicdemand', 'transfer']
-    data.loc[:, cat_cols] = get_dummies(data[cat_cols])
-    ncat = learncats(data.values, classcol=-1, continuous_ids=[data.columns.get_loc(c) for c in cont_cols])
-    return data.values.astype(float), ncat
-
-
-def segment(data):
-    data = data.drop(columns=['region.centroid.col', 'region.pixel.count'])
-    cat_cols = ['short.line.density.5', 'short.line.density.2', 'class']
-    cont_cols = ['region.centroid.row', 'vedge.mean', 'vegde.sd', 'hedge.mean', 'hedge.sd',
-                 'intensity.mean', 'rawred.mean', 'rawblue.mean', 'rawgreen.mean', 'exred.mean', 'exblue.mean' ,
-                 'exgreen.mean', 'value.mean', 'saturation.mean', 'hue.mean']
-    data.loc[:, cat_cols] = get_dummies(data[cat_cols])
-    ncat = learncats(data.values, classcol=-1, continuous_ids=[data.columns.get_loc(c) for c in cont_cols])
-    return data.values.astype(float), ncat
-
-
-def german(data):
-    cat_cols = [0, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16, 18, 19, 20]
-    cont_cols = [1, 4, 7, 10, 12, 15, 17]
-    data.iloc[:, cat_cols] = get_dummies(data[cat_cols])
-    ncat = learncats(data.values, classcol=-1, continuous_ids=cont_cols)
-    return data.values.astype(float), ncat
-
-
-def vowel(data):
-    cat_cols = ['Speaker_Number', 'Sex', 'Class']
-    data.loc[:, cat_cols] = get_dummies(data[cat_cols])
-    ncat = learncats(data.values, classcol=data.shape[1]-1)
-    return data.values.astype(float), ncat
-
-
-def cmc(data):
-    cat_cols = ['Wifes_education', 'Husbands_education', 'Wifes_religion', 'Wifes_now_working%3F',
-            'Husbands_occupation', 'Standard-of-living_index', 'Media_exposure', 'Contraceptive_method_used']
-    cont_cols = ['Wifes_age', 'Number_of_children_ever_born']
-    data.loc[:, cat_cols] = get_dummies(data[cat_cols])
-    ncat = learncats(data.values, classcol=data.shape[1]-1)
-    return data.values.astype(float), ncat
-
-
-def get_data(name):
-    if 'wine' in name:
-        data_red = pd.read_csv('../data/winequality_red.csv')
-        data_white = pd.read_csv('../data/winequality_white.csv')
-        data = pd.concat([data_red, data_white]).values
-        data[:, -1] = np.where(data[:, -1] <= 6, 0, 1)
-        ncat = learncats(data, classcol=data.shape[1]-1)
-    elif 'bank' in name:
-        data = pd.read_csv('../data/bank-additional-full.csv', sep=';')
-        data, ncat = bank(data)
-    elif 'segment' in name:
-        data = pd.read_csv('../data/segment.csv')
-        data, ncat = segment(data)
-    elif 'german' in name:
-        data = pd.read_csv('../data/german.csv', sep=' ', header=None)
-        data, ncat = german(data)
-    elif 'vehicle' in name:
-        data = pd.read_csv('../data/vehicle.csv')
-        data['Class'] = get_dummies(data['Class'])
-        ncat = np.ones(data.shape[1])
-        ncat[-1] = len(np.unique(data['Class']))
-        data = data.values.astype(float)
-    elif 'vowel' in name:
-        data = pd.read_csv('../data/vowel.csv')
-        data, ncat = vowel(data)
-    elif 'authent' in name:
-        data = pd.read_csv('../data/authent.csv')
-        data['Class'] = get_dummies(data['Class'])
-        ncat = learncats(data.values).astype(int)
-        data = data.values.astype(float)
-    elif 'diabetes' in name:
-        data = pd.read_csv('../data/diabetes.csv')
-        data['class'] = get_dummies(data['class'])
-        ncat = learncats(data.values,
-                         continuous_ids=[0] # Force first variable to be continuous
-                         ).astype(int)
-        data = data.values.astype(float)
-    elif 'cmc' in name:
-        data = pd.read_csv('../data/cmc.csv')
-        data, ncat = cmc(data)
-    elif 'electricity' in name:
-        data = pd.read_csv('../data/electricity.csv')
-        data, ncat = electricity(data)
-    elif 'gesture' in name:
-        data = pd.read_csv('../data/gesture.csv')
-        data['Phase'] = get_dummies(data['Phase'])
-        data = data.values.astype(float)
-        ncat = np.ones(data.shape[1])
-        ncat[-1] = 5
-    elif 'breast' in name:
-        data = pd.read_csv('../data/wdbc.csv')
-        data['Class'] = get_dummies(data['Class'])
-        data = data.values.astype(float)
-        ncat = np.ones(data.shape[1])
-        ncat[-1] = 2
-    elif 'krvskp' in name:
-        data = pd.read_csv('../data/kr-vs-kp.csv')
-        data = get_dummies(data)
-        ncat = learncats(data.values)
-        data = data.values.astype(float)
-    elif 'dna' in name:
-        data = pd.read_csv('../data/dna.csv')
-        data = get_dummies(data).values.astype(float)
-        ncat = learncats(data)
-    elif 'robot' in name:
-        data = pd.read_csv('../data/robot.csv')
-        data['Class'] = get_dummies(data['Class'])
-        data = data.values.astype(float)
-        ncat = learncats(data)
-    elif 'mice' in name:
-        data = pd.read_csv('../data/miceprotein.csv')
-        data['class'] = get_dummies(data['class'])
-        data = data.replace('?', np.nan)
-        data = data.drop(['MouseID', 'Genotype', 'Treatment', 'Behavior'], axis=1)
-        data = data.values.astype(float)
-        ncat = learncats(data)
-    elif 'dresses' in name:
-        data = pd.read_csv('../data/dresses.csv')
-        data = data.replace('?', np.nan)
-        data = get_dummies(data)
-        data = data.values.astype(float)
-        data[data < 0] = np.nan
-        ncat = learncats(data)
-    elif 'texture' in name:
-        data = pd.read_csv('../data/texture.csv')
-        data['Class'] = get_dummies(data['Class'])
-        data = data.values.astype(float)
-        ncat = np.ones(data.shape[1])
-        ncat[-1] = 11
-    elif 'splice' in name:
-        data = pd.read_csv('../data/splice.csv')
-        data = data.drop('Instance_name', axis=1)
-        data = get_dummies(data).values.astype(float)
-        ncat = learncats(data)
-    elif 'jungle' in name:
-        data = pd.read_csv('../data/jungle.csv')
-        data = get_dummies(data)
-        data = data.values.astype(float)
-        ncat = learncats(data)
-    elif 'phishing' in name:
-        data = pd.read_csv('../data/phishing.csv')
-        data = get_dummies(data)
-        data = data.values.astype(float)
-        ncat = learncats(data)
-    elif 'fashion' in name:
-        data = pd.read_csv('../data/fashion.csv')
-        data = data.values.astype(np.float64)
-        ncat = np.ones(data.shape[1]).astype(np.int64)
-        ncat[-1] = 10
-    elif 'mnist' in name:
-        data = pd.read_csv('../data/mnist.csv')
-        data = data.values.astype(np.float64)
-        ncat = np.ones(data.shape[1]).astype(np.int64)
-        ncat[-1] = 10
-    else:
-        print("Sorry, dataset {} is not available.".format(name))
-        print("You have to provide the data and run the appropriate pre-processing steps yourself.")
-        raise ValueError
-
-    return data, ncat
-
-
-
-
-
-
 
 
 """
@@ -919,7 +545,7 @@ python model_gef.py test_model
         if not classcol:
             classcol = data.shape[1] - 1
         for i in range(data.shape[1]):
-            if i != classcol and (i in continuous_ids or gef_is_continuous(data[:, i])):
+            if i != classcol and (i in continuous_ids or is_continuous(data[:, i])):
                 continue
             else:
                 data[:, i] = data[:, i].astype(int)

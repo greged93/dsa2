@@ -1,14 +1,21 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
+### Usage:
   ipython titanic_gefs.py  train      --config  config1  --pdb
   ipython titanic_gefs.py  predict    --config  config1
+
+ipython  titanic_gefs.py  data_profile
+ipython  titanic_gefs.py  preprocess  --nsample 100
+ipython  titanic_gefs.py  train       --nsample 200
+ipython  titanic_gefs.py  predict
 
 
 """
 import warnings, copy, os, sys
 warnings.filterwarnings("ignore")
 
+####################################################################################
 ###### Path ########################################################################
 root_repo      =  os.path.abspath(os.getcwd()).replace("\\", "/") + "/"     ; print(root_repo)
 THIS_FILEPATH  =  os.path.abspath(__file__) 
@@ -63,7 +70,7 @@ config_default   = "config1"    ### name of function which contains data configu
 cols_input_type_1 = {
      "coly"   :   "Survived"
     ,"colid"  :   "PassengerId"
-    ,"colcat" :   []  # ["Sex", "Embarked", "Pclass", ]
+    ,"colcat" :   ["Sex", "Embarked", "Pclass", ]
     ,"colnum" :   [ "Age","SibSp", "Parch","Fare"]
     ,"coltext" :  []
     ,"coldate" :  []
@@ -98,7 +105,8 @@ def config1() :
         return  int(y)
 
 
-    model_dict = { "model_pars": {
+    model_dict = {
+    "model_pars": {
          "model_class": model_class
         ,"model_pars" : {'cat': 10, 'n_estimators': 5
                         }
@@ -117,13 +125,15 @@ def config1() :
 
             ],
         }
-    },
+      },
 
     "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
                         # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
-    },
+                      },
 
-    "data_pars": { "n_sample" : n_sample, "download_pars" : None,
+    "data_pars": { "n_sample" : n_sample,
+          "download_pars" : None,
+
         ### Raw data:  column input
         "cols_input_type" : cols_input_type_1,
 
@@ -138,26 +148,29 @@ def config1() :
              #'my_split_23'  : [ 'colnum_bin',   ],
           },
 
-        'data_pars' :{ 'cols_model_type': {},
-            # Raw dataset, pre preprocessing
-            "dataset_path" : "",
-            "batch_size":128,   ### Mini Batch from data
-            # Needed by getdataset
-            "clean" : False,
-            "data_path": "",
 
-            'colcat_unique' : colcat_unique,
-            'colcat_bin'    : colcat_bin,
-            'colcat'        : colcat,
-            'colnum'        : colnum,
-            'coly'          : coly,
-            'colembed_dict' : None
+        'data_pars' :{
+                'cols_model_type': {
+                },
+                # Raw dataset, pre preprocessing
+                "dataset_path" : "",
+                "batch_size":128,   ### Mini Batch from data
+                # Needed by getdataset
+                "clean" : False,
+                "data_path": "",
+
+                'colcat_unique' : colcat_unique,
+                'colcat_bin'    : colcat_bin,
+                'colnum'        : colnum,
+                'coly'          : coly,
+                'colembed_dict' : None
         }
 
         ### Filter data rows   #################################
         ,"filter_pars": { "ymax" : 2 ,"ymin" : -1 }
-    }
-    }
+
+         }
+      }
 
     ##### Filling Global parameters    ############################################################
     model_dict        = global_pars_update(model_dict, data_name, config_name=os_get_function_name() )
@@ -171,6 +184,8 @@ def config1() :
 ########## Preprocess #############################################################
 ### def preprocess(config="", nsample=1000):
 from core_run import preprocess
+
+
 
 
 ##################################################################################

@@ -280,7 +280,7 @@ def test(n_sample          = 1000):
 
     m = {
     'model_pars': {
-        'model_class':  "model_sklearn.py:LGBMClassifier"
+        'model_class':  "model_sklearn.py::LightGBM"
         ,'model_pars' : {  }
         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
         , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
@@ -289,18 +289,18 @@ def test(n_sample          = 1000):
             {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
 
             {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-            # {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
+            {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
 
             #### catcol INTO integer,   colcat into OneHot
             {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
-            # {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
+            {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
 
             ],
             }
     },
 
     'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
-    },
+     },
 
     'data_pars': { 'n_sample' : n_sample,
         'download_pars' : None,
@@ -331,7 +331,12 @@ def test(n_sample          = 1000):
     }
 
     ##### Running loop
-    ll = [ ( "model_sklearn.py:LGBMClassifier",   {     }
+    ll = [
+        ('torch_tabular.py::CategoryEmbeddingModelConfig',
+            {   'task': "classification",
+                'metrics' : ["f1","accuracy"],
+                'metrics_params' : [{"num_classes":num_classes},{}]
+            }
         ),
     ]
     for cfg in ll:
@@ -355,7 +360,6 @@ def test(n_sample          = 1000):
         log('Model architecture:')
         log(model.model)
         reset()
-
 
 
 if __name__ == "__main__":

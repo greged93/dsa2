@@ -27,6 +27,7 @@ jobs:
       
 
     ##### Log Start  ######################################################
+
     #- name: ssh_gen
     #  uses: webfactory/ssh-agent@v0.2.0
       #with:
@@ -39,6 +40,8 @@ jobs:
            # cd /home/runner/work/mlmodels/mlmodels/
 
     ########################################################################
+                
+
     # - name: log_start
     #  run: |
     #       cd /home/runner/work/mlmodels/  && git clone git@github.com:arita37/mlmodels_store.git  &&  ls && pwd
@@ -107,7 +110,7 @@ jobs:
 
     ########### Keras TF 2.4 #############################################################################
     - name: python keras_widedeep.py  test
-      # continue-on-error: true
+      continue-on-error: true
       run:  |
             cd source/models && ipython keras_widedeep.py  test
             echo "keras_widedeep.py" >> file_check.txt
@@ -121,6 +124,7 @@ jobs:
             echo "keras_widedeep_dense.py" >> file_check.txt
 
 
+
     - name: python model_vaemdn.py test
       # continue-on-error: true
       run:  cd source/models && ipython model_vaemdn.py test2
@@ -129,12 +133,12 @@ jobs:
 
     ########### SKlearn type #########################################################################
     - name: python model_gefs.py test
-      continue-on-error: true
+      # continue-on-error: true
       run:  cd source/models && ipython model_gefs.py test   && echo "model_gefs.py" >> file_check.txt
 
 
     - name: python model_sklearn.py test
-      # continue-on-error: true
+      continue-on-error: true
       run:  cd source/models && ipython model_sklearn.py test
 
 
@@ -168,17 +172,18 @@ jobs:
 
 
     - name: python optuna_lightgbm.py test
-      # continue-on-error: true
+      continue-on-error: true
       run:  cd source/models && ipython optuna_lightgbm.py test
 
 
-    #- name: python model_sampler.py test
-    #  continue-on-error: true
-    #  run:  cd source/models && ipython model_sampler.py test
+    - name: python model_sampler.py test
+      continue-on-error: true
+      run:  cd source/models && ipython model_sampler.py test
 
-    # - name: python model_encoder.py test
-    #  continue-on-error: true
-    #  run:  cd source/models && ipython model_encoder.py test
+    - name: python model_encoder.py test
+      continue-on-error: true
+      run:  cd source/models && ipython model_encoder.py.py test
+
 
 
     #################################################################################################
@@ -203,11 +208,12 @@ jobs:
 
 
     ########### Keras TF 1.5 #############################################################################
-    - name: pip3 install tensorflow==1.4.1  keras==2.3.1
+    - name: pip3 install tensorflow==1.15  keras==2.3.1
       run: |
         python3 -m pip uninstall tensorflow  keras -y
-        python3 -m pip install tensorflow==1.4.1  keras==2.3.1  --upgrade  --force-reinstall
+        python3 -m pip install tensorflow==1.4.1  --upgrade  --force-reinstall
         python -c "import tensorflow as tf;print(tf) "
+
 
     - name: python model_vaem.py test
       continue-on-error: true
