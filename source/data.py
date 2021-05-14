@@ -57,14 +57,12 @@ def data_load_memory(dfX=None, nsample=-1):
 
 
 
-
-
 def data_load_memory_iterator(dfX=None, nsample=-1):
     """
         dfX str, pd.DataFrame,   Spark DataFrame
 
         for dfi in data_load_memory_iterator(dfX=None, nsample=-1):
-        	
+
 
     """
     if isinstance(dfX, pd.DataFrame):
@@ -105,24 +103,15 @@ def data_load_memory_iterator(dfX=None, nsample=-1):
 
 
 
-
-
-
-
-
-
-
-def data_save(dfX=None, path=None):
+def data_save(dfX=None, path=None, fname='file'):
     """
         dfX: pd.DataFrame, with automatic iterator ii
 
     """
-
     flist = glob.glob(path + "/*.parquet")
-    imax = len(flist) + 1  ### Add file
+    imax  = len(flist) + 1  ### Add file
+    os.makedirs(path, exist_ok=True)
     dfX[cols].to_parquet( path + f"/{fname}_{imax}.parquet" )
-
-
 
 
 
@@ -148,14 +137,14 @@ def data_split(dfX, data_pars, model_path, colsX, coly):
         return data_pars
 
     ##### Split on  Path  ###############################################
-    m = {'Xtrain'  : model_path + "train/Xtrain/" ,
+    m = { 'Xtrain' : model_path + "train/Xtrain/" ,
           'ytrain' : model_path + "train/ytrain/",
           'Xtest'  : model_path + "train/Xtest/",
           'ytest'  : model_path + "train/ytest/",
 
           'Xval'   : model_path + "train/Xval/",
           'yval'   : model_path + "train/yval/",
-          }
+        }
     for key, path in m.items() :
        os.makedirs(path, exist_ok =True)
 
