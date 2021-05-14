@@ -347,14 +347,9 @@ def preprocess_inference(df, path_pipeline="data/pipeline/pipe_01/", preprocess_
     global_pars = model_dict['global_pars']
     path_dfXy = global_pars["path_data_preprocess"] + "/dfXy/"
     os.makedirs(path_dfXy, exist_ok= True)
-    data_save(dfXy,path_dfXy,"features")
+    dfXy.to_parquet( path_dfXy + f"/features_0.parquet" ) ### i=0...10
     return path_dfXy, cols_family_full
 
-def data_save(dfX, path, fname='file', ii=None):
-    import glob
-    flist_existing = glob.glob(path + "*.parquet")
-    ii = len(flist_existing) + 1 if ii is None else ii
-    dfX.to_parquet( path + fname +f"_{ii}.parquet")
 
 def preprocess_load(path_train_X="", path_train_y="", path_pipeline_export="", cols_group=None, n_sample=5000,
                preprocess_pars={},  path_features_store=None):

@@ -157,7 +157,9 @@ def predict(model_dict, dfX, cols_family, post_process_fun=None):
     log("Pred    : ",  dfX[[ coly + '_pred'  ]])
 
     log("### Prediction  ###################################################")
-    ypred_tuple = modelx.predict((dfX,{'columns':colsX}), data_pars    = model_dict['data_pars'],
+    dfX    =  data_load_memory(dfX)
+    dfX  = dfX.reindex(columns=colsX)   #reindex included
+    ypred_tuple = modelx.predict(dfX, data_pars    = model_dict['data_pars'],
                                       compute_pars = model_dict['compute_pars'])
     log2('ypred shape', str(ypred_tuple)[:100] )
     if ypred_proba is None : 
@@ -182,15 +184,12 @@ def data_load_memory(dfX):
     return:
         dfX: df or type
     """
-    import pandas as pd
     if isinstance(dfX, str):
         import glob
         from utilmy import pd_read_file
         path = dfX
         dfX = pd_read_file( dfX + "/*.parquet" )
         return dfX
-    if isinstance(dfX, pd.DataFrame):
-        assert len(dfX) > 0, "Empty Dataframe"
     return dfX
         
         

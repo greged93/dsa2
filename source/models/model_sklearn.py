@@ -102,10 +102,10 @@ def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     global model, session
 
     if Xpred is None:
-        Xpred = data_load_memory(Xpred)
+        Xpred = get_dataset2(data_pars, task_type="predict")
     else :
         if isinstance(Xpred, tuple):
-            Xpred = data_load_memory(Xpred[0], cols=Xpred[1]['columns'])
+            Xpred = data_load_memory(Xpred[0], cols=Xpred[1])
         if data_pars.get('type', 'pandas') in ['pandas', 'ram'] and isinstance(Xpred, pd.DataFrame):
             Xpred,_ = get_dataset_split_for_model_pandastuple(Xpred, ytrain=None, data_pars= data_pars, )
         else :
