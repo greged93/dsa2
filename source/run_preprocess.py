@@ -3,9 +3,7 @@
 """
   cd analysis
   run preprocess
-
   ipython tseries.py  train      --config  config1  --pdb
-
 """
 import warnings, sys, gc, os, sys, json, copy, pandas as pd
 warnings.filterwarnings('ignore')
@@ -88,7 +86,6 @@ def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_g
     """
       Used for trainiing only
       Save params on disk
-
     :param path_train_X:
     :param path_train_y:
     :param path_pipeline_export:

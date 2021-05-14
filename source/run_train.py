@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 python source/run_train.py  run_train --config_name elasticnet  --path_data_train data/input/train/    --path_output data/output/a01_elasticnet/
-
 python source/run_train.py  run_train   --n_sample 100  --config_name lightgbm  --path_model_config source/config_model.py  --path_output /data/output/a01_test/     --path_data_train /data/input/train/
-
 """
 import warnings,sys, os, json, importlib, copy
 warnings.filterwarnings('ignore')
@@ -71,7 +69,6 @@ def map_model(model_name):
       Get the Class of the object stored in source/models/
     :param model_name:   model_sklearn
     :return: model module
-
     """
     ##### Custom folder
     if ".py" in model_name :
@@ -104,7 +101,6 @@ def map_model(model_name):
 def data_split(dfX, data_pars, model_path, colsX, coly):
     """
        Mini Batch data Split on Disk
-
     """
     import pandas as pd
 
@@ -224,11 +220,9 @@ def train(model_dict, dfX, cols_family, post_process_fun):
                            'ytrain' : dfX[coly].iloc[:itrain],
                            'Xtest'  : dfX[colsX].iloc[itrain:ival, :],
                            'ytest'  : dfX[coly].iloc[itrain:ival],
-
                            'Xval'   : dfX[colsX].iloc[ival:, :],
                            'yval'   : dfX[coly].iloc[ival:],
                          }
-
     
     #### TODO : Lazy Dict to have large dataset
     ##### Lazy Dict mechanism : Only path
@@ -497,7 +491,4 @@ def mlflow_register(dfXy, model_dict: dict, stats: dict, mlflow_pars:dict ):
 if __name__ == "__main__":
     import fire
     fire.Fire()
-
-
-
 

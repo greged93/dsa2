@@ -4,9 +4,6 @@
 ### Usage:
   python tsampler.py  train_sampler        --config  config_sampler
   python tsampler.py  transform_sampler    --config  config_sampler
-
-
-
 """
 import warnings, copy, os, sys
 warnings.filterwarnings("ignore")
@@ -172,7 +169,7 @@ from core_run import preprocess
 ########## Train #################################################################
 # def train_sampler(config=None, nsample=None):
 from core_run import train_sampler
-
+from pprint import pprint
 
 
 def test_batch():
@@ -184,14 +181,14 @@ def test_batch():
    ]
 
    for m in ll :
-     mdict['model_pars']['model_class'] = m[0]
-     mdict['model_pars']['model_pars']  = m[1]
+    mdict['model_pars']['model_class'] = m[0]
+    mdict['model_pars']['model_pars']  = m[1]
 
-    config_uri, config_name = get_config_path(config)
-
-    mdict = get_global_pars(  config_uri)
+    #config_uri, config_name = get_config_path(config)
+    nsample = None
+    #mdict = get_global_pars(  config_uri)
     m     = mdict['global_pars']
-    log(mdict)
+    pprint(mdict)
     from source import run_sampler
     run_sampler.run_train(config_name     =  None,
                         config_path       =  None,
@@ -213,11 +210,6 @@ def test_batch():
 ###########################################################################################################
 ###########################################################################################################
 if __name__ == "__main__":
-    from pyinstrument import Profiler;  profiler = Profiler() ; profiler.start()
     import fire
-    fire.Fire()
-    profiler.stop() ; print(profiler.output_text(unicode=True, color=True))
+    fire.Fire(test_batch)
     
-
-
-

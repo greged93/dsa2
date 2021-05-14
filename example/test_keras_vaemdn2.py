@@ -1,27 +1,25 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
-  ipython titanic_gefs.py  train      --config  config1  --pdb
-  ipython titanic_gefs.py  predict    --config  config1
-
-
+  python example/test_mkeras.py  train    --config config1
 """
 import warnings, copy, os, sys
 warnings.filterwarnings("ignore")
 
+####################################################################################
 ###### Path ########################################################################
 root_repo      =  os.path.abspath(os.getcwd()).replace("\\", "/") + "/"     ; print(root_repo)
-THIS_FILEPATH  =  os.path.abspath(__file__) 
-
+THIS_FILEPATH  =  os.path.abspath(__file__)
 sys.path.append(root_repo)
-from source.util_feature import save,os_get_function_name
+from source.util_feature import os_get_function_name
+
 
 def global_pars_update(model_dict,  data_name, config_name):
     print("config_name", config_name)
     dir_data  = root_repo + "/data/"  ; print("dir_data", dir_data)
 
     m                      = {}
-    m["config_path"]       = THIS_FILEPATH  
+    m["config_path"]       = THIS_FILEPATH
     m["config_name"]       = config_name
 
     #### peoprocess input path
@@ -55,40 +53,26 @@ def global_pars_update(model_dict,  data_name, config_name):
     return model_dict
 
 
+
+
 ####################################################################################
 ##### Params########################################################################
 config_default   = "config1"    ### name of function which contains data configuration
 
-
-cols_input_type_1 = {
-     "coly"   :   "Survived"
-    ,"colid"  :   "PassengerId"
-    ,"colcat" :   []  # ["Sex", "Embarked", "Pclass", ]
-    ,"colnum" :   [ "Age","SibSp", "Parch","Fare"]
-    ,"coltext" :  []
-    ,"coldate" :  []
-    ,"colcross" : [  ]
-}
-
-
-colcat = cols_input_type_1['colcat']
-colnum = cols_input_type_1['colnum']
-coly   = cols_input_type_1['coly']
-
-# colcat_unique = {  col: list(df[col].unique())  for col in colcat }
-colcat_unique = {  'Sex': 2, 'Embarked': 2 }   ### nbf unique values
-
-colcat_bin  = []  ### Compute the bins for category
+# data_name    = "titanic"     ### in data/input/
+coly   =   "Survived"
+colid  =   "PassengerId"
+colcat =   ["Sex", "Embarked", "Pclass", ]
+colnum =   [ "Age","SibSp", "Parch","Fare"]
 
 
 ####################################################################################
 def config1() :
     """
-       ONE SINGLE DICT Contains all needed informations for
-       used for titanic classification task
+        source/models/model_vaemdn.py  test2
     """
     data_name    = "titanic"         ### in data/input/
-    model_class  = "source/models/model_gefs.py::RandomForest"  ### ACTUAL Class name for model_sklearn.py
+    model_class  = "source/models/model_vaemdn.py.py::VAEMDN"  ### ACTUAL Class name for model
     n_sample     = 1000
 
     def post_process_fun(y):   ### After prediction is done
@@ -97,71 +81,101 @@ def config1() :
     def pre_process_fun(y):    ### Before the prediction is done
         return  int(y)
 
-
-    model_dict = { "model_pars": {
+    model_dict = {"model_pars": {
          "model_class": model_class
-        ,"model_pars" : {'cat': 10, 'n_estimators': 5
-                        }
+        ,"model_pars" : {
+            'original_dim':       len( colcat + colnum),
+            'class_num':             2,
+            'intermediate_dim':     64,
+            'intermediate_dim_2':   16,
+            'latent_dim' :           3,
+            'Lambda1'    :           1,
+            'batch_size' :         256,
+            'Lambda2'    :         200,
+            'Alpha'      :         0.075
+         }
 
-        , "post_process_fun" : post_process_fun   ### After prediction  ##########################################
+        , "post_process_fun" : post_process_fun                    ### After prediction  #########################
         , "pre_process_pars" : {"y_norm_fun" :  pre_process_fun ,  ### Before training  ##########################
-            ### Pipeline for data processing ##############################
-            "pipe_list": [
-            {"uri": "source/prepro.py::pd_coly",                 "pars": {}, "cols_family": "coly",       "cols_out": "coly",           "type": "coly"         },
 
-            # {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
-            # {"uri": "source/prepro.py::pd_colnum_binto_onehot",  "pars": {}, "cols_family": "colnum_bin", "cols_out": "colnum_onehot",  "type": ""             },
+        ### Pipeline for data processing ##############################
+        "pipe_list": [
+          {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+          {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+          {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+          #### neeed to 0-1 Normalize the input
 
-            {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
-            #{"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
+        ],
+      }},
 
-            ],
-        }
-    },
 
-    "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
-                        # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
-    },
+      "compute_pars": { "metric_list":  ["accuracy_score","average_precision_score"],
+                        'compute_pars': {'epochs': 1 },
+                        'path_checkpoint' : "ztmp_checkpoint/"
+      },
 
-    "data_pars": { "n_sample" : n_sample, "download_pars" : None,
-        ### Raw data:  column input
-        "cols_input_type" : cols_input_type_1,
 
-          ### Model Input :  Merge family of columns
-          "cols_model_group": [ "colnum",
-                                "colcat_bin",  ]
+      "data_pars": { "n_sample" : n_sample,
+          "download_pars" : None,
 
-          #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
-          ,'cols_model_type': {
-             #'continuous'   : [ 'colnum',   ],
-             #'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
-             #'my_split_23'  : [ 'colnum_bin',   ],
+          ### family of columns for raw input data  #########################################################
+          "cols_input_type" :  {
+            'colid'  : colid,
+            'colcat' : colcat,
+            'colnum' : colnum,
+            'coly'  :  coly,
           },
 
-        'data_pars' :{ 'cols_model_type': {},
-            # Raw dataset, pre preprocessing
-            "dataset_path" : "",
-            "batch_size":128,   ### Mini Batch from data
-            # Needed by getdataset
-            "clean" : False,
-            "data_path": "",
+          ### family of columns used for model input  #########################################################
+          "cols_model_group": [ "colnum_bin",  "colcat_bin"  ]
 
-            'colcat_unique' : colcat_unique,
-            'colcat_bin'    : colcat_bin,
-            'colcat'        : colcat,
-            'colnum'        : colnum,
-            'coly'          : coly,
-            'colembed_dict' : None
+        ,'cols_model_type': {
+            'colcontinuous':   colnum ,
+            'colsparse' :      colcat,
         }
+          ### Filter data rows   ##################################################################
+         ,"filter_pars": { "ymax" : 2 ,"ymin" : -1 }
 
-        ### Filter data rows   #################################
-        ,"filter_pars": { "ymax" : 2 ,"ymin" : -1 }
-    }
-    }
+         }
+      }
 
     ##### Filling Global parameters    ############################################################
     model_dict        = global_pars_update(model_dict, data_name, config_name=os_get_function_name() )
+
+
+
+    # Read train features
+    """
+    import pandas as pd, numpy as np
+    df = pd.read_csv( model_dict['global_pars']['path_data_preprocess'] + 'features.zip' )
+
+    colnum = model_dict['data_pars']['cols_input_type']['colnum']
+    coly   = model_dict['data_pars']['cols_input_type']['coly']
+
+
+    # Add "colcat_unique" key
+    colcat = model_dict['data_pars']['cols_input_type']['colcat']
+    colcat_unique = {col: list(df[col].unique()) for col in colcat}
+    model_dict['data_pars']['cols_input_type']['colcat_unique'] = colcat_unique,
+
+
+    # Add "colembed_dict" key
+    colembed = ['Sex']  # added manually
+    colembed_dict = {col: 2 + int(np.log(df[col].nunique())) for col in colembed}
+    model_dict['data_pars']['cols_input_type']['colembed_dict'] = colembed_dict
+
+
+
+    model_dict['data_pars']['data_pars'] = {
+        'colcat'        : colcat,
+        'colnum'        : colnum,
+        'coly'          : coly,
+        'colcat_unique' : colcat_unique,
+        'colembed_dict' : colembed_dict,
+    }
+    """
     return model_dict
+
 
 
 
@@ -179,7 +193,6 @@ from core_run import preprocess
 from core_run import train
 
 
-
 ####################################################################################
 ####### Inference ##################################################################
 # predict(config="", nsample=10000)
@@ -187,15 +200,12 @@ from core_run import predict
 
 
 
-
-###########################################################################################################
 ###########################################################################################################
 if __name__ == "__main__":
     from pyinstrument import Profiler;  profiler = Profiler() ; profiler.start()
     import fire
     fire.Fire()
     profiler.stop() ; print(profiler.output_text(unicode=True, color=True))
-    
 
 
 

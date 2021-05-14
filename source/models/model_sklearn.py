@@ -81,31 +81,57 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     else:
         model.model.fit(Xtrain, ytrain, **compute_pars.get("compute_pars", {}))
 
-def data_load_memory(dfX=None, cols=None):
+
+def data_load_memory(dfX=None):
     """
-    Arguments:
-        dfX str or type -- [description]
-    return:
-        dfX: df or type
+        dfX =  pd.DataFrame,  
+               string path, 
+               dict
     """
+    if isinstance(dfX, pd.DataFrame):
+       return dfX
+
+    if isinstance(dfX, tuple):
+       if isintance(dfX[1], list)
+            cols = dfX[1]
+            if isinstance(dfX[0], pd.DataFrame) :
+                return dfX[0][cols]
+
+            if isinstance(dfX[0], str) :
+                path = dfX[0]
+                dfX = pd_read_file( path + "/*.parquet" )
+                dfX = dfX[cols]
+                return dfX
+
+       if isintance(dfX[1], dict)
+            dd   = dfX[1]
+            cols = dd.get('cols', None)
+
+            if isinstance(dfX[0], pd.DataFrame) :
+                return dfX[0][cols]
+
+            if isinstance(dfX[0], str) :
+                path = dfX[0]
+                dfX  = pd_read_file( path + "/*.parquet" )
+                dfX  = dfX[cols]
+                return dfX
+
+
     if isinstance(dfX, str):
-        import glob
-        from utilmy import pd_read_file
         path = dfX
-        file_list = glob.glob(dfX + "*.parquet")
-        for file in file_list:
-            dfX    = pd_read_file(file)
-        return (dfX[cols] if cols is not None else dfX)
-    return (dfX[cols] if cols is not None else dfX)
+        path = dfX[0]
+        dfX  = pd_read_file( path + "/*.parquet" )        
+        return dfX
+
 
 def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     global model, session
 
     if Xpred is None:
-        Xpred = data_load_memory(Xpred)
+        Xpred = get_dataset2(data_pars, task_type="predict")
     else :
-        if isinstance(Xpred, tuple):
-            Xpred = data_load_memory(Xpred[0], cols=Xpred[1]['columns'])
+        Xpred = data_load_memory(Xpred)  #### 
+         
         if data_pars.get('type', 'pandas') in ['pandas', 'ram'] and isinstance(Xpred, pd.DataFrame):
             Xpred,_ = get_dataset_split_for_model_pandastuple(Xpred, ytrain=None, data_pars= data_pars, )
         else :
@@ -280,7 +306,7 @@ def test(n_sample          = 1000):
 
     m = {
     'model_pars': {
-        'model_class':  "model_sklearn.py::LightGBM"
+        'model_class':  "model_sklearn.py:LGBMClassifier"
         ,'model_pars' : {  }
         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
         , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
@@ -289,18 +315,18 @@ def test(n_sample          = 1000):
             {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
 
             {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-            {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
+            # {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
 
             #### catcol INTO integer,   colcat into OneHot
             {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
-            {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
+            # {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
 
             ],
             }
     },
 
     'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
-     },
+    },
 
     'data_pars': { 'n_sample' : n_sample,
         'download_pars' : None,
@@ -331,12 +357,7 @@ def test(n_sample          = 1000):
     }
 
     ##### Running loop
-    ll = [
-        ('torch_tabular.py::CategoryEmbeddingModelConfig',
-            {   'task': "classification",
-                'metrics' : ["f1","accuracy"],
-                'metrics_params' : [{"num_classes":num_classes},{}]
-            }
+    ll = [ ( "model_sklearn.py:LGBMClassifier",   {     }
         ),
     ]
     for cfg in ll:
@@ -360,6 +381,7 @@ def test(n_sample          = 1000):
         log('Model architecture:')
         log(model.model)
         reset()
+
 
 
 if __name__ == "__main__":

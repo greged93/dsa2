@@ -1,11 +1,8 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
-
 python source/run_train.py  run_train --config_name elasticnet  --path_data_train data/input/train/    --path_output data/output/a01_elasticnet/
-
 activate py36 && python source/run_train.py  run_train   --n_sample 100  --config_name lightgbm  --path_model_config source/config_model.py  --path_output /data/output/a01_test/     --path_data_train /data/input/train/
-
 """
 import warnings
 warnings.filterwarnings('ignore')
@@ -33,13 +30,10 @@ SUPERVISED_MODELS = ['SMOTE', 'SMOTEENN', 'SMOTETomek', 'NearMiss']
 ### bug with logger
 from util import logger_class
 logger = logger_class()
-
 def log(*s):
     logger.log(*s, level=1)
-
 def log2(*s):
     logger.log(*s, level=2)
-
 def log_pd(df, *s, n=0, m=1):
     sjump = "\n" * m
     log(sjump,  df.head(n))
@@ -91,7 +85,6 @@ def map_model(model_name):
       Get the Class of the object stored in source/models/
     :param model_name:   model_sklearn
     :return: model module
-
     """
 
     ##### Custom folder
@@ -115,9 +108,10 @@ def map_model(model_name):
     except :
         ### All SKLEARN API
         ### ['ElasticNet', 'ElasticNetCV', 'LGBMRegressor', 'LGBMModel', 'TweedieRegressor', 'Ridge']:
-       mod    = 'models.model_sklearn'
+       mod    = 'models.model_sampler'
        modelx = importlib.import_module(mod)
-
+       print(dir(modelx))
+    
     return modelx
 
 
@@ -206,6 +200,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
         dfX2, y = modelx.transform((dfX[colsX], dfX[coly]),data_pars=data_pars, compute_pars=compute_pars)
         dfX2 = pd.DataFrame(dfX2, columns = colsX)
     else:
+        print(f'model_name:{model_file,model_name}')
         dfX2 = modelx.transform(dfX[colsX], data_pars=data_pars, compute_pars=compute_pars)
     # dfX2.index = dfX.index
 
@@ -254,8 +249,9 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     :param n_sample:
     :return:
     """
-    model_dict  = model_dict_load(model_dict, config_path, config_name, verbose=True)
-
+    
+    #metric_list              = compute_pars['metric_list']
+    #model_file               = model_pars.get('model_file',"model_sampler")
     m           = model_dict['global_pars']
     path_data_train   = m['path_data_train']
     path_train_X      = m.get('path_train_X', path_data_train + "/features.zip") #.zip
@@ -338,7 +334,6 @@ def transform(model_name, path_model, dfX, cols_family, model_dict):
         path_model {[str]} -- [description]
         dfX {[DataFrame]} -- [description]
         cols_family {[dict]} -- [description]
-
     Returns: ypred
         [numpy.array] -- [vector of prediction]
     """
@@ -448,7 +443,3 @@ def run_transform(config_name, config_path, n_sample=1,
 if __name__ == "__main__":
     import fire
     fire.Fire()
-
-
-
-
