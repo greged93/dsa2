@@ -90,15 +90,11 @@ def map_model(model_name):
        modelx = importlib.import_module(mod)
 
     except :
-        ### All SKLEARN API
-        ### ['ElasticNet', 'ElasticNetCV', 'LGBMRegressor', 'LGBMModel', 'TweedieRegressor', 'Ridge']:
+       log3("Using model file models.model_sklearn") ### All SKLEARN API
        mod    = 'models.model_sklearn'
        modelx = importlib.import_module(mod)
 
     return modelx
-
-
-
 
 
 def train(model_dict, dfX, cols_family, post_process_fun):
@@ -128,7 +124,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     data_pars_ref = copy.deepcopy(data_pars)
 
 
-    log("#### Model Input : Actual data split ########################################")
+    log("#### Model Input : Actual data split #########################################")
     #### date_type :  'ram', 'pandas', tf_data,  torch_data,
     data_pars['data_type'] = data_pars.get('data_type', 'disk_data')
 
@@ -136,7 +132,6 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     ###### dfX : path or Datafrane  ####################################################
     from models.data import data_split
     data_pars = data_split(dfX, data_pars, model_path, colsX, coly)
-    itrain    = int(0.6 * len(dfX))
     ival      = int(0.8 * len(dfX))
 
 
@@ -153,17 +148,13 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     log("#### Predict ##################################################################")
-    ### Need to load in memory
     ypred, ypred_proba = modelx.predict((dfX,{'columns':colsX}), data_pars= data_pars_ref, compute_pars=compute_pars)
 
-
-    # from data import data_load_memory
+    ### Need to load in memory
     from models.data import data_load_memory
-
-    dfX                  = data_load_memory(dfX, nsample=-1)  ### Need to load in memory !
+    dfX                  = data_load_memory(dfX, nsample= 9000000)  ### Need to load in memory !
 
     dfX[coly + '_pred']  = ypred  # y_norm(ypred, inverse=True)
-
     dfX[coly]            = dfX[coly].apply(lambda  x : post_process_fun(x) )
     dfX[coly + '_pred']  = dfX[coly + '_pred'].apply(lambda  x : post_process_fun(x) )
     log2("Prediction    : ",  dfX[[ coly, coly + '_pred' ]] )
@@ -268,7 +259,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     log2(cols_group)
 
 
-    log("#### Preprocess  ################################################################")
+    log("#### Preprocess  #################################################################")
     preprocess_pars = model_dict['model_pars']['pre_process_pars']
      
     if mode == "run_preprocess" :
@@ -285,7 +276,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
                                           preprocess_pars,  path_features_store=path_features_store)
 
 
-    log("#### Extract column names  #####################################################")
+    log("#### Extract column names  ########################################################")
     ### Actual column names for Model Input :  label y and Input X (colnum , colcat), remove duplicate names
     model_dict['data_pars']['coly']       = cols['coly']
     model_dict['data_pars']['cols_model'] = list(set(sum([  cols[colgroup] for colgroup in model_dict['data_pars']['cols_model_group'] ]   , []) ))
@@ -298,19 +289,19 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
         model_dict['data_pars']['cols_model_type2'][colg] = list(set(sum([  cols[colgroup] for colgroup in colg_list ]   , [])))
 
 
-    log("#### Train model: #############################################################")
+    log("#### Train model: #################################################################")
     log3(str(model_dict)[:1000])
     post_process_fun      = model_dict['model_pars']['post_process_fun']
     dfXy, dfXytest,stats  = train(model_dict, dfXy, cols, post_process_fun)
 
 
-    log("#### Register model ##########################################################")
+    log("#### Register model ###############################################################")
     mlflow_pars = model_dict.get('compute_pars', {}).get('mlflow_pars', None)
     if mlflow_pars is not None:
         mlflow_register(dfXy, model_dict, stats, mlflow_pars)
 
 
-    log("#### Export ########################################################################")
+    log("#### Export #######################################################################")
     if return_mode == 'dict' :
         return { 'dfXy' : dfXy, 'dfXytest': dfXytest, 'stats' : stats   }
 
