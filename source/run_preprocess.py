@@ -111,7 +111,7 @@ def preprocess_batch(path_train_X="", path_train_y="", path_pipeline_export="", 
 
 
 def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_group=None, n_sample=5000,
-               preprocess_pars={}, path_features_store=None, model_dict={}):
+               preprocess_pars={}, path_features_store=None):
     """ Used for trainiing only, Save params on disk
     :param path_train_X:
     :param path_train_y:
