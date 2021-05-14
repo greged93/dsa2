@@ -67,8 +67,8 @@ def model_dict_load(model_dict, config_path, config_name, verbose=True):
 def map_model(model_name):
     """
       Get the Class of the object stored in source/models/
-    :param model_name:   model_sklearn
-    :return: model module
+       :param model_name:   model_sklearn
+       :return: model module
     """
     ##### Custom folder
     if ".py" in model_name :
@@ -114,12 +114,12 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log2(data_pars['cols_model_type2'])
 
 
-    log("#### Model Input : columns ##################################################")
+    log("#### Model Input : columns ####################################################")
     colsX  = data_pars['cols_model']
     coly   = data_pars['coly']
     log2('Model colsX', colsX)
     log2('Model coly',  coly)
-    log2('Model column type: ',data_pars['cols_model_type2'])
+    log2('Model column type: ', data_pars['cols_model_type2'])
     ### Only Parameters
     data_pars_ref = copy.deepcopy(data_pars)
 
@@ -174,7 +174,6 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
     if coly + '_proba' in dfX.columns :
         log2('y_proba', dfX[ coly + '_proba'  ])
-
 
     log("#### Metrics ################################################################")
     from util_feature import  metrics_eval
@@ -253,13 +252,13 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     log(path_output)
 
 
-    log("#### load raw data column family, colum check  ###################################")
+    log("#### load raw data column family, colum check  #######################################")
     cols_validate(model_dict)
     cols_group = model_dict['data_pars']['cols_input_type']  ### Raw
     log2(cols_group)
 
 
-    log("#### Preprocess  #################################################################")
+    log("#### Preprocess  #####################################################################")
     preprocess_pars = model_dict['model_pars']['pre_process_pars']
      
     if mode == "run_preprocess" :
@@ -276,7 +275,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
                                           preprocess_pars,  path_features_store=path_features_store)
 
 
-    log("#### Extract column names  ########################################################")
+    log("#### Extract column names  #########################################################")
     ### Actual column names for Model Input :  label y and Input X (colnum , colcat), remove duplicate names
     model_dict['data_pars']['coly']       = cols['coly']
     model_dict['data_pars']['cols_model'] = list(set(sum([  cols[colgroup] for colgroup in model_dict['data_pars']['cols_model_group'] ]   , []) ))
@@ -316,7 +315,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
         dfXy.to_parquet(path_check_out     + "/dfX.parquet")      # train input data 
         dfXytest.to_parquet(path_check_out + "/dfXtest.parquet")  # Test input data 
 
-        log("######### Finish #############################################################", )
+        log("######### Finish #############################################################",)
 
 
 
