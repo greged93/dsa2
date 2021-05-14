@@ -304,9 +304,13 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     if return_mode == 'dict' :
         return { 'dfXy' : dfXy, 'dfXytest': dfXytest, 'stats' : stats   }
 
-    else :        
+    else :
+        from models.data import data_load_memory
+        dfXy      = data_load_memory(dfXy, n_sample)
+        dfXytest  = data_load_memory(dfXytest, n_sample)
+
         os.makedirs(path_check_out, exist_ok=True)
-        colexport = [cols['colid'], cols['coly'], cols['coly'] + "_pred"]
+        colexport = [cols['colid'], cols['coly'], cols['dfXy, dfXytest,stats coly'] + "_pred"]
         if cols['coly'] + '_proba' in  dfXy.columns :
             colexport.append( cols['coly'] + '_proba' )
         dfXy[colexport].sample(n=100).to_csv(path_check_out + "/pred_check_sample.csv", sep="\t")  # Only results
@@ -316,6 +320,26 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
         dfXytest.to_parquet(path_check_out + "/dfXtest.parquet")  # Test input data 
 
         log("######### Finish #############################################################",)
+
+
+
+
+
+def run_train_batch(config_name, config_path="source/config_model.py", n_sample=5000,
+              mode="run_preprocess", model_dict=None, return_mode='file', **kw):
+    """ Configuration of the model is
+    :param config_name:
+    :param config_path:
+    :param n_sample:
+    :return:
+    """
+    pass
+
+
+
+
+
+
 
 
 
