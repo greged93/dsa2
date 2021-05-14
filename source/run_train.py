@@ -98,84 +98,6 @@ def map_model(model_name):
     return modelx
 
 
-def data_split(dfX, data_pars, model_path, colsX, coly):
-    """
-       Mini Batch data Split on Disk
-    """
-    import pandas as pd
-
-    ##### Dense Dict : not good  #################################################
-    if data_pars['data_type'] == 'ram':
-        log2(dfX.shape)
-        dfX    = dfX.sample(frac=1.0)
-        itrain = int(0.6 * len(dfX))
-        ival   = int(0.8 * len(dfX))
-        data_pars['train'] = { 'Xtrain' : dfX[colsX].iloc[:itrain, :],
-                               'ytrain' : dfX[coly].iloc[:itrain],
-                               'Xtest'  : dfX[colsX].iloc[itrain:ival, :],
-                               'ytest'  : dfX[coly].iloc[itrain:ival],
-
-                               'Xval'   : dfX[colsX].iloc[ival:, :],
-                               'yval'   : dfX[coly].iloc[ival:],
-                             }
-        return data_pars
-
-
-    #### TODO : Lazy Dict to have large dataset  ####################################
-    ##### Lazy Dict mechanism : Only path
-    m = {'Xtrain'  : model_path + "train/Xtrain/" ,
-          'ytrain' : model_path + "train/ytrain/",
-          'Xtest'  : model_path + "train/Xtest/",
-          'ytest'  : model_path + "train/ytest/",
-
-          'Xval'   : model_path + "train/Xval/",
-          'yval'   : model_path + "train/yval/",
-          }
-    for key, path in m.items() :
-       os.makedirs(path, exist_ok =True)
-
-
-    if isinstance(dfX, str) :
-        import glob
-        from utilmy import pd_read_file
-        flist = glob.glob(dfX + "*")
-        flist =  [t for  t in flist ]  ### filter
-        for i, fi in enumerate(flist) :
-            dfXi = pd_read_file(fi)
-            log2(dfXi.shape)
-            dfX    = dfXi.sample(frac=1.0)
-            itrain = int(0.6 * len(dfXi))
-            ival   = int(0.8 * len(dfXi))
-            dfXi[colsX].iloc[:itrain, :].to_parquet(m['Xtrain']  + f"/file_{i}.parquet" )
-            dfXi[[coly]].iloc[:itrain].to_parquet(  m['ytrain']  + f"/file_{i}.parquet" )
-
-            dfXi[colsX].iloc[itrain:ival, :].to_parquet(m['Xtest']  + f"/file_{i}.parquet" )
-            dfXi[[coly]].iloc[itrain:ival].to_parquet(  m['ytest']  + f"/file_{i}.parquet" )
-
-            dfXi[colsX].iloc[ival:, :].to_parquet(      m['Xval']  + f"/file_{i}.parquet" )
-            dfXi[[coly]].iloc[ival:].to_parquet(        m['yval']  + f"/file_{i}.parquet"  )
-
-
-    if isinstance(dfX, pd.DataFrame):
-        ##### Actual Split  ###########################################################
-        log2(dfX.shape)
-        dfX    = dfX.sample(frac=1.0)
-        itrain = int(0.6 * len(dfX))
-        ival   = int(0.8 * len(dfX))
-        dfX[colsX].iloc[:itrain, :].to_parquet(m['Xtrain']  + "/file_01.parquet" )
-        dfX[[coly]].iloc[:itrain].to_parquet(  m['ytrain']  + "/file_01.parquet" )
-
-        dfX[colsX].iloc[itrain:ival, :].to_parquet(m['Xtest']  + "/file_01.parquet" )
-        dfX[[coly]].iloc[itrain:ival].to_parquet(  m['ytest']  + "/file_01.parquet" )
-
-        dfX[colsX].iloc[ival:, :].to_parquet(      m['Xval']  + "/file_01.parquet" )
-        dfX[[coly]].iloc[ival:].to_parquet(        m['yval']  + "/file_01.parquet"  )
-
-
-    #### date_type :  'ram', 'pandas', tf_data,  torch_data,  #####################
-    data_pars['data_type'] = data_pars.get('data_type', 'ram')  ### Tf dataset, pytorch
-    data_pars['train']     = m
-    return data_pars
 
 
 
@@ -199,8 +121,8 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log("#### Model Input : columns ##################################################")
     colsX  = data_pars['cols_model']
     coly   = data_pars['coly']
-    log2('Model colsX',colsX)
-    log2('Model coly', coly)
+    log2('Model colsX', colsX)
+    log2('Model coly',  coly)
     log2('Model column type: ',data_pars['cols_model_type2'])
     ### Only Parameters
     data_pars_ref = copy.deepcopy(data_pars)
@@ -211,23 +133,11 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     data_pars['data_type'] = data_pars.get('data_type', 'disk_data')
 
 
-    ###### Pass full Pandas dataframe  ################################################
-    """log2(dfX.shape)
-    dfX    = dfX.sample(frac=1.0)
-    itrain = int(0.6 * len(dfX))
-    ival   = int(0.8 * len(dfX))
-    data_pars['train'] = { 'Xtrain' : dfX[colsX].iloc[:itrain, :],
-                           'ytrain' : dfX[coly].iloc[:itrain],
-                           'Xtest'  : dfX[colsX].iloc[itrain:ival, :],
-                           'ytest'  : dfX[coly].iloc[itrain:ival],
-                           'Xval'   : dfX[colsX].iloc[ival:, :],
-                           'yval'   : dfX[coly].iloc[ival:],
-                         }
-    
-    #### TODO : Lazy Dict to have large dataset
-    ##### Lazy Dict mechanism : Only path
-    """
+    ###### dfX : path or Datafrane  ####################################################
+    from data import data_split
     data_pars = data_split(dfX, data_pars, model_path, colsX, coly)
+    itrain    = int(0.6 * len(dfX))
+    ival      = int(0.8 * len(dfX))
 
 
     log("#### Init, Train #############################################################")
@@ -242,17 +152,20 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     modelx.fit(data_pars, compute_pars)
 
 
-    log("#### Predict ################################################################")
+    log("#### Predict ##################################################################")
+    ### Need to load in memory
     ypred, ypred_proba = modelx.predict((dfX,{'columns':colsX}), data_pars= data_pars_ref, compute_pars=compute_pars)
 
-    dfX[coly + '_pred'] = ypred  # y_norm(ypred, inverse=True)
+
+    from data import data_load_memory
+    dfX                  = data_load_memory(dfX, nsample=-1)  ### Need to load in memory !
+
+    dfX[coly + '_pred']  = ypred  # y_norm(ypred, inverse=True)
 
     dfX[coly]            = dfX[coly].apply(lambda  x : post_process_fun(x) )
     dfX[coly + '_pred']  = dfX[coly + '_pred'].apply(lambda  x : post_process_fun(x) )
     log2("Prediction    : ",  dfX[[ coly, coly + '_pred' ]] )
 
-    itrain = int(0.6 * len(dfX))
-    ival = int(0.8 * len(dfX))
 
     if ypred_proba is None :  ### No proba
         ypred_proba_val = None
