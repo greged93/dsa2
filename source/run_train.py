@@ -1,4 +1,3 @@
-  
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
@@ -106,7 +105,7 @@ def data_split(dfX, data_pars, model_path, colsX, coly):
     import pandas as pd
 
     ##### Dense Dict : not good  #################################################
-    if data_pars['data_type'] == 'ram':
+    if data_pars['date_type'] == 'ram':
         log2(dfX.shape)
         dfX    = dfX.sample(frac=1.0)
         itrain = int(0.6 * len(dfX))
@@ -178,7 +177,7 @@ def data_split(dfX, data_pars, model_path, colsX, coly):
     data_pars['train']     = m
     return data_pars
 
-
+from sklearn.preprocessing import LabelEncoder
 
 def train(model_dict, dfX, cols_family, post_process_fun):
     """  Train the model using model_dict, save model, save prediction
@@ -209,26 +208,30 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
     log("#### Model Input : Actual data split ########################################")
     #### date_type :  'ram', 'pandas', tf_data,  torch_data,
-    data_pars['data_type'] = data_pars.get('data_type', 'disk_data')
+    data_pars['data_type'] = data_pars.get('data_type', 'ram')
 
 
     ###### Pass full Pandas dataframe  ################################################
-    """log2(dfX.shape)
+    log2(dfX.shape)
     dfX    = dfX.sample(frac=1.0)
     itrain = int(0.6 * len(dfX))
     ival   = int(0.8 * len(dfX))
-    data_pars['train'] = { 'Xtrain' : dfX[colsX].iloc[:itrain, :],
-                           'ytrain' : dfX[coly].iloc[:itrain],
-                           'Xtest'  : dfX[colsX].iloc[itrain:ival, :],
-                           'ytest'  : dfX[coly].iloc[itrain:ival],
-                           'Xval'   : dfX[colsX].iloc[ival:, :],
-                           'yval'   : dfX[coly].iloc[ival:],
+    dfX = dfX.apply(LabelEncoder().fit_transform)
+    data_pars['train'] = { 'Xtrain' : dfX[colsX].iloc[:itrain, :].astype('float32'),
+                           'ytrain' : dfX[coly].iloc[:itrain].astype('float32'),
+                           'Xtest'  : dfX[colsX].iloc[itrain:ival, :].astype('float32'),
+                           'ytest'  : dfX[coly].iloc[itrain:ival].astype('float32'),
+
+                           'Xval'   : dfX[colsX].iloc[ival:, :].astype('float32'),
+                           'yval'   : dfX[coly].iloc[ival:].astype('float32'),
                          }
-    
+
+    """
     #### TODO : Lazy Dict to have large dataset
     ##### Lazy Dict mechanism : Only path
-    """
     data_pars = data_split(dfX, data_pars, model_path, colsX, coly)
+    """
+
 
 
     log("#### Init, Train #############################################################")
@@ -241,62 +244,61 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
     ### Using Actual daa in data_pars['train']
     modelx.fit(data_pars, compute_pars)
-
+    
 
     log("#### Predict ################################################################")
-    ypred, ypred_proba = modelx.predict((dfX,colsX), data_pars= data_pars_ref, compute_pars=compute_pars)
+    ypred = modelx.predict(dfX[colsX], data_pars= data_pars_ref, compute_pars=compute_pars)
+    try:
+        dfX[coly + '_pred'] = ypred  # y_norm(ypred, inverse=True)
 
-    dfX[coly + '_pred'] = ypred  # y_norm(ypred, inverse=True)
+        dfX[coly]            = dfX[coly].apply(lambda  x : post_process_fun(x) )
+        dfX[coly + '_pred']  = dfX[coly + '_pred'].apply(lambda  x : post_process_fun(x) )
+        log2("Prediction    : ",  dfX[[ coly, coly + '_pred' ]] )
+        
+        if ypred_proba is None :  ### No proba
+            ypred_proba_val = None
 
-    dfX[coly]            = dfX[coly].apply(lambda  x : post_process_fun(x) )
-    dfX[coly + '_pred']  = dfX[coly + '_pred'].apply(lambda  x : post_process_fun(x) )
-    log2("Prediction    : ",  dfX[[ coly, coly + '_pred' ]] )
+        elif len(ypred_proba.shape) <= 1  :  #### Single dim proba
+            ypred_proba_val      = ypred_proba[ival:]
+            dfX[coly + '_proba'] = ypred_proba
 
-    itrain = int(0.6 * len(dfX))
-    ival = int(0.8 * len(dfX))
+        elif len(ypred_proba.shape) > 1 :   ## Muitple proba
+            from util_feature import np_conv_to_one_col
+            ypred_proba_val      = ypred_proba[ival:,:]
+            dfX[coly + '_proba'] = np_conv_to_one_col(ypred_proba, ";")  ### merge into string "p1,p2,p3,p4"
 
-    if ypred_proba is None :  ### No proba
-        ypred_proba_val = None
-
-    elif len(ypred_proba.shape) <= 1  :  #### Single dim proba
-       ypred_proba_val      = ypred_proba[ival:]
-       dfX[coly + '_proba'] = ypred_proba
-
-    elif len(ypred_proba.shape) > 1 :   ## Muitple proba
-        from util_feature import np_conv_to_one_col
-        ypred_proba_val      = ypred_proba[ival:,:]
-        dfX[coly + '_proba'] = np_conv_to_one_col(ypred_proba, ";")  ### merge into string "p1,p2,p3,p4"
-
-    if coly + '_proba' in dfX.columns :
-        log2('y_proba', dfX[ coly + '_proba'  ])
+        if coly + '_proba' in dfX.columns :
+            log2('y_proba', dfX[ coly + '_proba'  ])
 
 
-    log("#### Metrics ################################################################")
-    from util_feature import  metrics_eval
-    metrics_test = metrics_eval(metric_list,
-                                ytrue       = dfX[coly].iloc[ival:],
-                                ypred       = dfX[coly + '_pred'].iloc[ival:],
-                                ypred_proba = ypred_proba_val )
-    stats = {'metrics_test' : metrics_test}
-    log(stats)
+        log("#### Metrics ################################################################")
+        from util_feature import  metrics_eval
+        metrics_test = metrics_eval(metric_list,
+                                    ytrue       = dfX[coly].iloc[ival:],
+                                    ypred       = dfX[coly + '_pred'].iloc[ival:],
+                                    ypred_proba = ypred_proba_val )
+        stats = {'metrics_test' : metrics_test}
+        log(stats)
 
 
-    log("### Saving model, dfX, columns ##############################################")
-    log2(model_path + "/model.pkl")
-    os.makedirs(model_path, exist_ok=True)
-    save(colsX, model_path + "/colsX.pkl")
-    save(coly,  model_path + "/coly.pkl")
-    modelx.save(model_path, stats)
+        log("### Saving model, dfX, columns ##############################################")
+        log2(model_path + "/model.pkl")
+        os.makedirs(model_path, exist_ok=True)
+        save(colsX, model_path + "/colsX.pkl")
+        save(coly,  model_path + "/coly.pkl")
+        modelx.save(model_path, stats)
 
 
-    log("### Reload model,            ###############################################")
-    log2(modelx.model.model_pars, modelx.model.compute_pars)
-    modelx = map_model(model_name)
-    modelx.load_model(model_path )
-    log("Reload model pars", modelx.model.model_pars)
-    log2("Reload model", modelx.model)
+        log("### Reload model,            ###############################################")
+        log2(modelx.model.model_pars, modelx.model.compute_pars)
+        modelx = map_model(model_name)
+        modelx.load_model(model_path )
+        log("Reload model pars", modelx.model.model_pars)
+        log2("Reload model", modelx.model)
 
-    return dfX.iloc[:ival, :].reset_index(), dfX.iloc[ival:, :].reset_index(), stats
+        return dfX.iloc[:ival, :].reset_index(), dfX.iloc[ival:, :].reset_index(), stats
+    except:
+        return ypred,None,None
 
 
 ####################################################################################################
@@ -363,9 +365,9 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
                                      cols_group,       ### dict of column family
                                      n_sample,
                                      preprocess_pars,
-                                     path_features_store,  ### Store intermediate dataframe
-                                     model_dict)
-        
+                                     path_features_store  ### Store intermediate dataframe
+                                     )
+
     elif mode == "load_preprocess"  :  #### Load existing data
         dfXy, cols      = preprocess_load(path_train_X, path_train_y, path_pipeline, cols_group, n_sample,
                                           preprocess_pars,  path_features_store=path_features_store)
@@ -492,5 +494,4 @@ def mlflow_register(dfXy, model_dict: dict, stats: dict, mlflow_pars:dict ):
 if __name__ == "__main__":
     import fire
     fire.Fire()
-
 
