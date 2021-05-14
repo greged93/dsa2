@@ -82,46 +82,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
         model.model.fit(Xtrain, ytrain, **compute_pars.get("compute_pars", {}))
 
 
-def data_load_memory(dfX=None):
-    """
-        dfX =  pd.DataFrame,  
-               string path, 
-               dict
-    """
-    if isinstance(dfX, pd.DataFrame):
-       return dfX
-
-    if isinstance(dfX, tuple):
-       if isintance(dfX[1], list)
-            cols = dfX[1]
-            if isinstance(dfX[0], pd.DataFrame) :
-                return dfX[0][cols]
-
-            if isinstance(dfX[0], str) :
-                path = dfX[0]
-                dfX = pd_read_file( path + "/*.parquet" )
-                dfX = dfX[cols]
-                return dfX
-
-       if isintance(dfX[1], dict)
-            dd   = dfX[1]
-            cols = dd.get('cols', None)
-
-            if isinstance(dfX[0], pd.DataFrame) :
-                return dfX[0][cols]
-
-            if isinstance(dfX[0], str) :
-                path = dfX[0]
-                dfX  = pd_read_file( path + "/*.parquet" )
-                dfX  = dfX[cols]
-                return dfX
-
-
-    if isinstance(dfX, str):
-        path = dfX
-        path = dfX[0]
-        dfX  = pd_read_file( path + "/*.parquet" )        
-        return dfX
+from data import data_load_memory
 
 
 def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
@@ -394,6 +355,49 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+"""
+def data_load_memory(dfX=None):
+    #    dfX =  pd.DataFrame,  
+    #           string path, 
+    #           dict
+    if isinstance(dfX, pd.DataFrame):
+       return dfX
+
+    if isinstance(dfX, tuple):
+       if isintance(dfX[1], list)
+            cols = dfX[1]
+            if isinstance(dfX[0], pd.DataFrame) :
+                return dfX[0][cols]
+
+            if isinstance(dfX[0], str) :
+                path = dfX[0]
+                dfX = pd_read_file( path + "/*.parquet" )
+                dfX = dfX[cols]
+                return dfX
+
+       if isintance(dfX[1], dict)
+            dd   = dfX[1]
+            cols = dd.get('cols', None)
+
+            if isinstance(dfX[0], pd.DataFrame) :
+                return dfX[0][cols]
+
+            if isinstance(dfX[0], str) :
+                path = dfX[0]
+                dfX  = pd_read_file( path + "/*.parquet" )
+                dfX  = dfX[cols]
+                return dfX
+
+    if isinstance(dfX, str):
+        path = dfX
+        path = dfX[0]
+        dfX  = pd_read_file( path + "/*.parquet" )        
+        return dfX
+"""
 
 
 

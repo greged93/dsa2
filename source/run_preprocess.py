@@ -320,7 +320,8 @@ def preprocess_inference(df, path_pipeline="data/pipeline/pipe_01/", preprocess_
     global_pars = model_dict['global_pars']
     path_dfXy   = global_pars["path_data_preprocess"] + "/dfXy/"
 
-    from data import data_save
+    from models.data import data_save
+    
     data_save(dfXy, path_dfXy, "features")
     return path_dfXy, cols_family_full
 

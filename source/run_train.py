@@ -157,7 +157,9 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     ypred, ypred_proba = modelx.predict((dfX,{'columns':colsX}), data_pars= data_pars_ref, compute_pars=compute_pars)
 
 
-    from data import data_load_memory
+    # from data import data_load_memory
+    from models.data import data_load_memory
+
     dfX                  = data_load_memory(dfX, nsample=-1)  ### Need to load in memory !
 
     dfX[coly + '_pred']  = ypred  # y_norm(ypred, inverse=True)
