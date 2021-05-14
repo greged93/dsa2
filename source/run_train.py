@@ -110,7 +110,7 @@ def data_split(dfX, data_pars, model_path, colsX, coly):
 
 
     ##### Dense Dict : previous version  #################################################
-    if data_pars['date_type'] == 'ram':
+    if data_pars['data_type'] == 'ram':
         log2(dfX.shape)
         dfX    = dfX.sample(frac=1.0)
         itrain = int(0.6 * len(dfX))
