@@ -249,7 +249,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     log("#### Predict ################################################################")
-    ypred, ypred_proba = modelx.predict((dfX,colsX), data_pars= data_pars_ref, compute_pars=compute_pars)
+    ypred, ypred_proba = modelx.predict((dfX,{'columns':colsX}), data_pars= data_pars_ref, compute_pars=compute_pars)
 
     dfX[coly + '_pred'] = ypred  # y_norm(ypred, inverse=True)
 
