@@ -62,9 +62,6 @@ def data_load_memory(dfX=None, nsample=-1):
         return dfX
 
 
-
-
-
 def data_load_memory_iterator(dfX=None, nsample=-1):
     """
         dfX str, pd.DataFrame,   Spark DataFrame
@@ -82,8 +79,6 @@ def data_load_memory_iterator(dfX=None, nsample=-1):
         for fi in flist :
            dfXi  = pd_read_file(fi , nrows= nsample )        
            yield dfXi
-
-
 
 
 def data_save(dfX=None, path=None, fname='file'):
@@ -143,8 +138,8 @@ def data_split(dfX, data_pars, model_path, colsX, coly):
             dfX    = dfXi.sample(frac=1.0)
             itrain = int(0.6 * len(dfXi))
             ival   = int(0.8 * len(dfXi))
-            dfXi[colsX].iloc[:itrain, :].to_parquet(m['Xtrain']  + f"/file_{i}.parquet" )
-            dfXi[[coly]].iloc[:itrain].to_parquet(  m['ytrain']  + f"/file_{i}.parquet" )
+            dfXi[colsX].iloc[:itrain, :].to_parquet(m['Xtrain']     + f"/file_{i}.parquet" )
+            dfXi[[coly]].iloc[:itrain].to_parquet(  m['ytrain']     + f"/file_{i}.parquet" )
 
             dfXi[colsX].iloc[itrain:ival, :].to_parquet(m['Xtest']  + f"/file_{i}.parquet" )
             dfXi[[coly]].iloc[itrain:ival].to_parquet(  m['ytest']  + f"/file_{i}.parquet" )

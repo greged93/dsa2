@@ -134,7 +134,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     ###### dfX : path or Datafrane  ####################################################
-    from data import data_split
+    from models.data import data_split
     data_pars = data_split(dfX, data_pars, model_path, colsX, coly)
     itrain    = int(0.6 * len(dfX))
     ival      = int(0.8 * len(dfX))
